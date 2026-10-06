@@ -1,0 +1,52 @@
+<!doctype html>
+<!-- Procedural icon generator for The Last Lantern. Open in a browser (or run tools/make-icons.js with puppeteer)
+     and it draws the app icons: a black lantern silhouette against fog, its flame an open cyan eye. -->
+<meta charset="utf-8"><title>icons</title>
+<body style="background:#222;margin:0;display:flex;gap:12px;flex-wrap:wrap;padding:12px">
+<script>
+function rnd(seed) { let s = seed >>> 0; return () => { s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function drawIcon(size, maskable) {
+  const c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d'), r = rnd(7);
+  const k = size / 512; g.scale(k, k);
+  // background: deep black, a pale fog bank glowing behind the lantern (Limbo backlight)
+  g.fillStyle = '#000'; g.fillRect(0, 0, 512, 512);
+  let gr = g.createRadialGradient(256, 300, 10, 256, 300, 300); gr.addColorStop(0, '#5d6266'); gr.addColorStop(.35, '#2a2d30'); gr.addColorStop(.75, '#0a0b0c'); gr.addColorStop(1, '#000');
+  g.fillStyle = gr; g.fillRect(0, 0, 512, 512);
+  for (let i = 0; i < 60; i++) { const x = r() * 512, y = 180 + r() * 300, rr = 30 + r() * 90; const f = g.createRadialGradient(x, y, 0, x, y, rr); f.addColorStop(0, 'rgba(200,205,210,.05)'); f.addColorStop(1, 'rgba(200,205,210,0)'); g.fillStyle = f; g.fillRect(x - rr, y - rr, rr * 2, rr * 2); }
+  // ground line
+  g.fillStyle = '#000'; g.beginPath(); g.moveTo(0, 512); for (let x = 0; x <= 512; x += 8) g.lineTo(x, (maskable ? 430 : 452) + Math.sin(x * .02) * 6 + Math.sin(x * .07) * 2); g.lineTo(512, 512); g.fill();
+  // the art is scaled into the maskable safe zone (inner 80% circle) when needed
+  const s = maskable ? .78 : .94; g.save(); g.translate(256, 262); g.scale(s, s); g.translate(-256, -262);
+  // lantern: hanging ring, cap, glass cage, base — all solid black silhouette
+  g.fillStyle = '#000'; g.strokeStyle = '#000';
+  g.lineWidth = 13; g.beginPath(); g.arc(256, 96, 30, Math.PI * .95, Math.PI * 2.05); g.stroke();
+  g.beginPath(); g.moveTo(186, 168); g.quadraticCurveTo(256, 96, 326, 168); g.lineTo(336, 184); g.lineTo(176, 184); g.closePath(); g.fill();
+  g.fillRect(226, 116, 60, 22);
+  // the glass: dark, lit from within by the eye
+  const gx0 = 192, gx1 = 320, gy0 = 184, gy1 = 372;
+  gr = g.createRadialGradient(256, 282, 4, 256, 282, 92); gr.addColorStop(0, 'rgba(118,196,222,.55)'); gr.addColorStop(.45, 'rgba(60,110,128,.35)'); gr.addColorStop(1, 'rgba(10,16,20,.9)');
+  g.fillStyle = '#05080a'; g.fillRect(gx0, gy0, gx1 - gx0, gy1 - gy0); g.fillStyle = gr; g.fillRect(gx0, gy0, gx1 - gx0, gy1 - gy0);
+  // cage bars
+  g.fillStyle = '#000'; for (const x of [gx0, 233, 279, gx1 - 11]) g.fillRect(x, gy0, 11, gy1 - gy0);
+  g.fillRect(gx0 - 8, gy0 - 6, gx1 - gx0 + 16, 14); g.fillRect(gx0 - 10, gy1 - 8, gx1 - gx0 + 20, 16);
+  g.beginPath(); g.moveTo(gx0 - 22, gy1 + 8); g.lineTo(gx1 + 22, gy1 + 8); g.lineTo(gx1 + 4, gy1 + 34); g.lineTo(gx0 - 4, gy1 + 34); g.fill();
+  // the flame is an eye: almond of cold light with a slit pupil, a halo leaking through the bars
+  g.save(); g.globalCompositeOperation = 'screen';
+  gr = g.createRadialGradient(256, 282, 0, 256, 282, 150); gr.addColorStop(0, 'rgba(118,196,222,.5)'); gr.addColorStop(.4, 'rgba(118,196,222,.12)'); gr.addColorStop(1, 'rgba(118,196,222,0)');
+  g.fillStyle = gr; g.fillRect(0, 100, 512, 360); g.restore();
+  g.beginPath(); g.moveTo(222, 282); g.quadraticCurveTo(256, 246, 290, 282); g.quadraticCurveTo(256, 318, 222, 282); g.closePath();
+  gr = g.createRadialGradient(256, 282, 0, 256, 282, 36); gr.addColorStop(0, '#e9f8fd'); gr.addColorStop(.5, '#9fdcef'); gr.addColorStop(1, '#4fa3c0'); g.fillStyle = gr; g.fill();
+  g.fillStyle = '#02080b'; g.beginPath(); g.ellipse(256, 282, 4.2, 15, 0, 0, Math.PI * 2); g.fill();
+  g.restore();
+  // film grain + vignette
+  const id = g.getImageData(0, 0, size, size), d = id.data;
+  for (let i = 0; i < d.length; i += 4) { const n = (r() - .5) * 22; d[i] = Math.max(0, Math.min(255, d[i] + n)); d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + n)); d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + n)); }
+  g.putImageData(id, 0, 0);
+  g.setTransform(1, 0, 0, 1, 0, 0); gr = g.createRadialGradient(size / 2, size / 2, size * .3, size / 2, size / 2, size * .72); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.75)');
+  g.fillStyle = gr; g.fillRect(0, 0, size, size);
+  return c;
+}
+const ICONS = [['icon-192.png', 192, false], ['icon-512.png', 512, false], ['icon-maskable-512.png', 512, true], ['apple-touch-icon.png', 180, false], ['favicon-32.png', 32, false]];
+window.renderAll = () => ICONS.map(([name, size, m]) => { const c = drawIcon(size, m); document.body.appendChild(c); return { name, data: c.toDataURL('image/png') }; });
+if (!navigator.webdriver) renderAll();
+</script>
