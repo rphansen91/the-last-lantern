@@ -9,13 +9,33 @@
       "id": "the-last-lantern",
       "title": "The Last Lantern",
       "blurb": "Oil runs low in the catacombs. The watchers wait past the edge of the light.",
-      "description": "A mobile-first atmospheric exploration game. Descend three procedurally generated depths with a lantern that keeps burning low. Collect lore, solve light puzzles, and keep the flame from going out — because when it dies, the watchers close in.",
+      "description": "A mobile-first atmospheric exploration game. Descend three procedurally generated depths with a lantern that keeps burning low. Collect lore, solve light puzzles, and keep the flame from going out \u2014 because when it dies, the watchers close in.",
       "how": "Walk with a floating stick (lower half of the screen). Aim your gaze with a drag in the upper half. Hold Raise to widen the light (burns oil faster) or Lower to shrink it to an ember. Use interacts with braziers, mirrors, and seals. Find the stair at each depth after solving its light puzzle.",
-      "tags": ["atmospheric", "exploration", "horror"],
+      "tags": [
+        "atmospheric",
+        "exploration",
+        "horror"
+      ],
       "status": "playable",
       "path": "games/the-last-lantern/",
       "cover": "games/the-last-lantern/screenshots/m-play.png",
       "accent": "#6ec8ff"
+    },
+    {
+      "id": "bayshift",
+      "title": "Bayshift",
+      "blurb": "Slide glowing freight crates into matching bay doors before the night shift ends.",
+      "description": "A mobile-first sliding puzzle on a midnight dock. Swipe crates across the bay grid \u2014 they keep moving until they hit a wall, another crate, or a door. Matching doors ship the load with a satisfying clear; wrong colors block like steel. Ten handcrafted bays that ramp from a straight shot to a rush-hour jam.",
+      "how": "Swipe a crate to slide it. Tap to select, then swipe (or use arrow keys / WASD on desktop). Undo backs out of a jam; Reset reloads the bay. Clear every crate to clock out and unlock the next level.",
+      "tags": [
+        "puzzle",
+        "casual",
+        "spatial"
+      ],
+      "status": "playable",
+      "path": "games/bayshift/",
+      "cover": "games/bayshift/screenshots/cover.png",
+      "accent": "#ffb454"
     }
   ]
 }

@@ -11,7 +11,8 @@ sw.js                 caches shell + catalog + listed game assets
 icons/                procedural dark / grainy / cyan arcade icons
 .nojekyll             GitHub Pages: serve as plain static site
 games/
-  the-last-lantern/   first title (own index, manifest, sw, icons, screenshots)
+  the-last-lantern/   atmospheric horror exploration
+  bayshift/           sliding freight puzzle (midnight dock)
 screenshots/          arcade UI captures (phone viewport)
 tools/arcade-icons.html  re-render arcade icons in headless Chrome
 ```
@@ -46,7 +47,9 @@ Serve locally (`python3 -m http.server` in this folder) and open http://localhos
 4. **Optional Library chip** in the game: if `location.search` contains `from=arcade`, show a fixed top-left link to `../../` (see The Last Lantern for a ~20-line example).
 5. **Bump** `VERSION` in root `sw.js` and add any new shell/game URLs you want precached to the `SHELL` array. Ship; stale-while-revalidate means the update often appears on the second visit.
 
-Empty / coming-soon slots are intentional — the grid shows a “More games soon” card so the library still feels like a home.
+Private inspirations for the daily App Store reimagine pipeline live in `inspirations.json` (source title + date + new slug only — never shown in the arcade UI).
+
+Empty / coming-soon slots are intentional when the library is thin — the grid can show a “More games soon” card.
 
 ## Tone
 
@@ -55,3 +58,7 @@ Dark background, film grain, cyan accent — kinship with The Last Lantern witho
 ## The Last Lantern
 
 Nested at [`games/the-last-lantern/`](games/the-last-lantern/). Direct play URL: [`games/the-last-lantern/`](https://rphansen91.github.io/the-last-lantern/games/the-last-lantern/). See that folder’s README for mechanics, controls, and hosting notes for the game itself.
+
+## Bayshift
+
+Nested at [`games/bayshift/`](games/bayshift/). Direct play: [`games/bayshift/`](https://rphansen91.github.io/the-last-lantern/games/bayshift/). Slide glowing crates into matching bay doors — a casual spatial puzzle that rounds out the catalog beside The Last Lantern.

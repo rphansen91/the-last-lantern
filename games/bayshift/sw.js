@@ -1,39 +1,16 @@
-/* Night Arcade — service worker.
-   Caches the shell + catalog + listed game shells so the library works offline.
-   Bump VERSION when shipping shell or catalog changes. */
-const VERSION = 'night-arcade-v2';
+/* Bayshift — offline cache. Bump VERSION on ship. */
+const VERSION = 'bayshift-v1';
 const SHELL = [
   './',
   './index.html',
-  './styles.css',
-  './app.js',
-  './catalog.json',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
   './icons/apple-touch-icon.png',
   './icons/favicon-32.png',
-  './games/the-last-lantern/',
-  './games/the-last-lantern/index.html',
-  './games/the-last-lantern/manifest.webmanifest',
-  './games/the-last-lantern/icons/icon-192.png',
-  './games/the-last-lantern/icons/icon-512.png',
-  './games/the-last-lantern/icons/icon-maskable-512.png',
-  './games/the-last-lantern/icons/apple-touch-icon.png',
-  './games/the-last-lantern/icons/favicon-32.png',
-  './games/the-last-lantern/screenshots/m-play.png',
-  './games/bayshift/',
-  './games/bayshift/index.html',
-  './games/bayshift/manifest.webmanifest',
-  './games/bayshift/icons/icon-192.png',
-  './games/bayshift/icons/icon-512.png',
-  './games/bayshift/icons/icon-maskable-512.png',
-  './games/bayshift/icons/apple-touch-icon.png',
-  './games/bayshift/icons/favicon-32.png',
-  './games/bayshift/screenshots/cover.png'
+  './screenshots/cover.png'
 ];
-
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
