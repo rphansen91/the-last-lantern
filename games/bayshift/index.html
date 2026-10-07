@@ -540,12 +540,13 @@ function startLevel(i) {
   L = LEVELS[LV]; st = BS.build(L);
   timeMax = timeLeft = L.time; started = false; freezeT = 0; overtimeUsed = false; coffee = 1; lift = 1; liftArmed = false;
   moves = 0; undoStack = []; drag = null; anims = []; parts = []; floaters = []; confetti = []; doorFx = {}; combo = 0; winPending = 0; lastTick = -1;
-  st.pieces.forEach(function (p) { p.vx = p.x; p.vy = p.y; p.thawT = 0; p.wasFrozen = BS.frozen(st, p); p.pop = 0; });
+  st.pieces.forEach(function (p) { p.vx = p.x; p.vy = p.y; p.thawT = 0; p.wasFrozen = BS.frozen(st, p); p.pop = 0; p.mot = null; p.sq = null; });
   st.doors.forEach(function (d) { d.openT = BS.doorOpen(st, d) ? 1 : 0; d.wasOpen = BS.doorOpen(st, d); });
   layout(); syncHud(); setMode('play');
   if (L.tip) toast('<b>Bay ' + (LV + 1) + ' · ' + L.name + '</b><br>' + L.tip, 4200); else toast('<b>Bay ' + (LV + 1) + ' · ' + L.name + '</b>', 1800);
 }
 function setMode(m) {
+  if (m !== 'play' && drag) endDrag(null, true);
   mode = m; document.body.dataset.mode = (m === 'play' || m === 'pause' || m === 'win' || m === 'fail') ? 'play' : 'menu';
   ['title', 'how', 'levels', 'pause', 'win', 'fail'].forEach(function (k) { UI[k].classList.toggle('hidden', m !== k); });
   if (m === 'levels') renderLevels();
@@ -581,12 +582,42 @@ function pushUndo(s) { undoStack.push(s); if (undoStack.length > 200) undoStack.
 function undo() {
   if (mode !== 'play' || drag || anims.length || !undoStack.length) return;
   var s = undoStack.pop(); BS.restore(st, s.s); moves = s.moves;
-  st.pieces.forEach(function (p) { p.vx = p.x; p.vy = p.y; p.wasFrozen = BS.frozen(st, p); });
+  st.pieces.forEach(function (p) { p.mot = null; p.sq = null; p.wasFrozen = BS.frozen(st, p); });
   st.doors.forEach(function (d) { d.wasOpen = BS.doorOpen(st, d); d.openT = d.wasOpen ? 1 : 0; });
   SFX.drop(); syncHud();
 }
 
-/* ---------- input: free drag along the grid ---------- */
+/* ---------- input: magnetic rails, flicks, springs ----------
+   The crate rides one axis at a time. Its float position (fx, fy) follows the finger 1:1
+   along that rail, clamped to a range scanned from the logical grid, so even the fastest
+   flick can never tunnel. A soft sine detent pulls toward cell lines; turning onto the
+   other axis needs a clearly perpendicular finger, and the crate is magnetically eased onto
+   the grid line first. Logical state is committed once per drag/flick, on release. */
+var FEEL = {
+  LOCK_PX: 7,         // finger travel (px) before an axis is chosen
+  SWITCH_MIN: .3,     // perpendicular finger offset (cells) needed before a turn is considered
+  SWITCH_RATIO: 1.6,  // recent perpendicular motion must beat on-axis motion by this (hysteresis)
+  ALIGN_TOL: .34,     // how close (cells) to a grid line the crate must be to turn
+  ALIGN_RATE: 30,     // 1/s: magnetic pull onto the grid line during a turn
+  MAGNET: .3,         // detent strength toward cell lines while dragging (0 = none, <1)
+  CATCH_RATE: 55,     // 1/s: smoothing used only for big jumps (e.g. right after a turn)
+  EXIT_PUSH: .3,      // cells past a matching door before the crate is pulled through
+  DOOR_PEEK: .45,     // how far the crate leans into an open matching door while held
+  FLICK_PXMS: .45,    // release speed (px/ms) that counts as a flick
+  FLICK_WIN: 70,      // ms of finger history used for release velocity
+  REST_MS: 60,        // finger still this long before lifting = placement, not a flick
+  GLIDE_GAIN: 1.1,    // flick speed multiplier
+  GLIDE_MIN: 14,      // cells/s minimum glide speed (min reach = GLIDE_MIN^2 / 2*FRICTION ≈ 4.9 cells)
+  GLIDE_MAX: 46,      // cells/s maximum glide speed
+  FRICTION: 20,       // cells/s^2 glide deceleration
+  SUCK_ACC: 150,      // cells/s^2 acceleration once a door grabs the crate
+  SPRING_W: 30,       // rad/s settle-spring stiffness
+  SPRING_Z: .6,       // settle-spring damping ratio (<1 = slight overshoot)
+  TICK_MS: 55,        // min ms between cell-crossing haptic ticks
+  BUMP_V: 1.2,        // min impact speed (cells/s) for a bump
+  GRAB: .55           // forgiving grab radius outside a crate (cells)
+};
+var lastBuzzTick = 0, lastRelease = null;
 function pt(e) { return { x: e.clientX, y: e.clientY }; }
 function pieceAt(x, y) {
   if (!G) return null;
@@ -595,8 +626,7 @@ function pieceAt(x, y) {
     var p = st.pieces[i]; if (!p.alive) continue;
     for (var j = 0; j < p.cells.length; j++) if (p.x + p.cells[j][0] === gx && p.y + p.cells[j][1] === gy) return p;
   }
-  // forgiving touch: nearest crate cell within 0.45 cell
-  var best = null, bd = .45 * G.cs;
+  var best = null, bd = FEEL.GRAB * G.cs;
   st.pieces.forEach(function (p) {
     if (!p.alive) return;
     p.cells.forEach(function (c) {
@@ -606,6 +636,42 @@ function pieceAt(x, y) {
   });
   return best;
 }
+function other(ax) { return ax === 'x' ? 'y' : 'x'; }
+function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+function detent(t) { return t - FEEL.MAGNET / (2 * Math.PI) * Math.sin(2 * Math.PI * t); }
+function tickBuzz() { var n = performance.now(); if (n - lastBuzzTick >= FEEL.TICK_MS) { lastBuzzTick = n; buzz(4); } }
+/* free range along an axis from integer (x, y), plus any matching door at either end */
+function scan(p, g, ax, x, y) {
+  var sx = ax === 'x' ? 1 : 0, sy = 1 - sx, c0 = ax === 'x' ? x : y, r = { lo: c0, hi: c0, dLo: null, dHi: null };
+  if (!BS.axisOk(p, sx, sy)) return r;
+  var i = 1; while (BS.fits(st, g, p, x + sx * i, y + sy * i)) i++; r.hi = c0 + i - 1;
+  i = 1; while (BS.fits(st, g, p, x - sx * i, y - sy * i)) i++; r.lo = c0 - i + 1;
+  r.dHi = BS.exitDoor(st, g, p, sx ? r.hi : x, sy ? r.hi : y, sx, sy);
+  r.dLo = BS.exitDoor(st, g, p, sx ? r.lo : x, sy ? r.lo : y, -sx, -sy);
+  return r;
+}
+function canMove(p, g, ax, s, x, y) {
+  var dx = ax === 'x' ? s : 0, dy = ax === 'y' ? s : 0;
+  if (!BS.axisOk(p, dx, dy)) return false;
+  return BS.fits(st, g, p, x + dx, y + dy) || !!BS.exitDoor(st, g, p, x, y, dx, dy);
+}
+function recent(d, ms) {
+  var s = d.samples, last = s[s.length - 1], first = last;
+  for (var i = s.length - 1; i >= 0; i--) { if (last.t - s[i].t > ms) break; first = s[i]; }
+  return { x: last.x - first.x, y: last.y - first.y, dt: last.t - first.t };
+}
+function setF(d, f) { if (d.ax === 'x') d.fx = f; else d.fy = f; d.p.vx = d.fx; d.p.vy = d.fy; }
+function lockAxis(ax) {
+  var d = drag; d.ax = ax; d.r = scan(d.p, d.g, ax, d.bx, d.by);
+  var f = clamp(ax === 'x' ? d.fx : d.fy, d.r.lo, d.r.hi); setF(d, f);
+  d.lastCell = Math.round(f); d.contact = 0; d.press = 0;
+}
+function pickAxis() {
+  var d = drag, dx = d.fingerX - d.sx, dy = d.fingerY - d.sy;
+  var first = Math.abs(dx) >= Math.abs(dy) ? 'x' : 'y', second = other(first);
+  function can(ax) { var v = ax === 'x' ? dx : dy; return canMove(d.p, d.g, ax, v >= 0 ? 1 : -1, d.bx, d.by); }
+  lockAxis(can(first) || !can(second) || Math.abs(second === 'x' ? dx : dy) < 2 ? first : second);
+}
 cv.addEventListener('pointerdown', function (e) {
   if (mode !== 'play' || drag || anims.some(function (a) { return a.block; })) return;
   audio();
@@ -613,77 +679,180 @@ cv.addEventListener('pointerdown', function (e) {
   if (!p) return;
   if (liftArmed) { useLift(p); return; }
   if (BS.frozen(st, p)) { p.pop = 1; SFX.bump(); buzz(15); toast('Frosted — thaws after <b>' + BS.frostLeft(st, p) + '</b> more load' + (BS.frostLeft(st, p) > 1 ? 's' : ''), 1500); return; }
-  started = true; if (!liftArmed) { clearTimeout(toastTimer); UI.toast.classList.remove('on'); }
+  started = true; clearTimeout(toastTimer); UI.toast.classList.remove('on');
   try { cv.setPointerCapture(e.pointerId); } catch (er) {}
-  drag = { p: p, id: e.pointerId, sx: q.x, sy: q.y, x0: p.x, y0: p.y, ox: 0, oy: 0, g: BS.grid(st), before: snap(), steps: 0 };
+  if (e.cancelable) e.preventDefault();
+  // catch a crate that is still gliding/settling: keep its visual position on its rail
+  var fx = p.x, fy = p.y, pre = null;
+  if (p.mot) { pre = p.mot.ax; if (pre === 'x') fx = p.vx; else fy = p.vy; p.mot = null; }
+  p.sq = null;
+  drag = { p: p, id: e.pointerId, g: BS.grid(st), before: snap(), x0: p.x, y0: p.y, bx: p.x, by: p.y, fx: fx, fy: fy,
+    sx: q.x, sy: q.y, fingerX: q.x, fingerY: q.y, ancX: fx - q.x / G.cs, ancY: fy - q.y / G.cs,
+    samples: [{ t: e.timeStamp, x: q.x, y: q.y }], ax: null, r: null, aligning: null, vel: 0, lastCell: 0, press: 0, pressDir: 0, contact: 0, steps: 0, lift: 0 };
+  p.vx = fx; p.vy = fy;
+  if (pre) lockAxis(pre);
   SFX.pick(); buzz(8);
 });
 cv.addEventListener('pointermove', function (e) {
   if (!drag || e.pointerId !== drag.id) return;
-  var q = pt(e);
-  advance(drag.x0 + (q.x - drag.sx) / G.cs, drag.y0 + (q.y - drag.sy) / G.cs);
+  var evs = (e.getCoalescedEvents && e.getCoalescedEvents()) || []; if (!evs.length) evs = [e];
+  for (var i = 0; i < evs.length; i++) drag.samples.push({ t: evs[i].timeStamp || e.timeStamp, x: evs[i].clientX, y: evs[i].clientY });
+  var s = drag.samples, cut = s[s.length - 1].t - 250, k = 0; while (k < s.length - 2 && s[k].t < cut) k++; if (k) s.splice(0, k);
+  drag.fingerX = e.clientX; drag.fingerY = e.clientY;
+  if (!drag.ax && Math.hypot(drag.fingerX - drag.sx, drag.fingerY - drag.sy) >= FEEL.LOCK_PX) pickAxis();
 });
-function endDrag(e) {
-  if (!drag || (e && e.pointerId !== drag.id)) return;
-  var d = drag, p = d.p; drag = null;
-  if (d.ox) { if (Math.abs(d.ox) >= .5) p.x += Math.sign(d.ox); }
-  if (d.oy) { if (Math.abs(d.oy) >= .5) p.y += Math.sign(d.oy); }
-  if (p.x !== d.x0 || p.y !== d.y0) { pushUndo(d.before); moves++; SFX.drop(); buzz(6); }
-  syncHud();
-}
-cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
-
-function advance(tx, ty) {
-  var d = drag, p = d.p;
-  for (var it = 0; it < 60; it++) {
-    var dx = tx - (p.x + d.ox), dy = ty - (p.y + d.oy);
-    if (Math.abs(dx) < 1e-3 && Math.abs(dy) < 1e-3) return;
-    if (d.ox) { stepAxis('x', dx); continue; }
-    if (d.oy) { stepAxis('y', dy); continue; }
-    var order = Math.abs(dx) >= Math.abs(dy) ? ['x', 'y'] : ['y', 'x'], moved = false;
-    for (var k = 0; k < 2; k++) {
-      var ax = order[k], dd = ax === 'x' ? dx : dy;
-      if (Math.abs(dd) < .02) continue;
-      var s = dd > 0 ? 1 : -1, sx = ax === 'x' ? s : 0, sy = ax === 'y' ? s : 0;
-      if (!BS.axisOk(p, sx, sy)) continue;
-      if (BS.fits(st, d.g, p, p.x + sx, p.y + sy)) { stepAxis(ax, dd); moved = true; break; }
-      if (Math.abs(dd) > .3) {
-        var door = BS.exitDoor(st, d.g, p, p.x, p.y, sx, sy);
-        if (door) { shipOut(p, door, sx, sy); return; }
-        if (bumpCool <= 0) { bumpCool = .35; SFX.bump(); buzz(10); p.pop = .6; }
-      }
+/* per-frame steering of the held crate (reads the latest finger position: no added latency) */
+function steer(dt) {
+  var d = drag, p = d.p, cs = G.cs;
+  d.lift = Math.min(1, d.lift + dt * 12);
+  if (!d.ax) { if (Math.hypot(d.fingerX - d.sx, d.fingerY - d.sy) >= FEEL.LOCK_PX) pickAxis(); else return; }
+  var tx = d.ancX + d.fingerX / cs, ty = d.ancY + d.fingerY / cs;
+  var A = d.ax, B = other(A), r = d.r;
+  var fA = A === 'x' ? d.fx : d.fy, fB = A === 'x' ? d.fy : d.fx, tA = A === 'x' ? tx : ty, tB = A === 'x' ? ty : tx, prev = fA;
+  // --- turning onto the other rail (hysteresis + magnetic alignment) ---
+  var eB = tB - fB;
+  if (!d.aligning && Math.abs(eB) > FEEL.SWITCH_MIN) {
+    var w = recent(d, 80), dwA = A === 'x' ? w.x : w.y, dwB = A === 'x' ? w.y : w.x;
+    var blocked = (tA > r.hi + .05 && fA >= r.hi - .02) || (tA < r.lo - .05 && fA <= r.lo + .02);
+    var dominant = Math.abs(dwB) > 1.5 && Math.abs(dwB) >= (blocked ? 1 : FEEL.SWITCH_RATIO) * Math.abs(dwA);
+    var drifted = Math.abs(eB) > .8 && Math.abs(dwB) >= Math.abs(dwA);
+    if (dominant || drifted) {
+      var k = clamp(Math.round(fA), r.lo, r.hi);
+      if (Math.abs(fA - k) <= FEEL.ALIGN_TOL && canMove(p, d.g, B, eB > 0 ? 1 : -1, A === 'x' ? k : d.bx, A === 'x' ? d.by : k)) d.aligning = { k: k };
     }
-    if (!moved) return;
   }
+  if (d.aligning) {
+    var k2 = d.aligning.k, gap = k2 - fA, step = gap * Math.min(1, FEEL.ALIGN_RATE * dt);
+    if (Math.abs(step) < 3 * dt) step = Math.sign(gap) * Math.min(Math.abs(gap), 3 * dt);
+    fA += step;
+    if (Math.abs(k2 - fA) < .01) {
+      setF(d, k2);
+      if (A === 'x') { d.ancX += k2 - tx; d.bx = k2; } else { d.ancY += k2 - ty; d.by = k2; }
+      d.aligning = null; d.vel = 0;
+      lockAxis(B); tickBuzz();
+    } else setF(d, fA);
+    return;
+  }
+  // --- track the finger along the rail with a soft detent at each cell line ---
+  var want = detent(tA), shown, s = 0, excess = 0;
+  if (tA > r.hi) { s = 1; excess = tA - r.hi; } else if (tA < r.lo) { s = -1; excess = r.lo - tA; }
+  var door = s > 0 ? r.dHi : s < 0 ? r.dLo : null, lim = s > 0 ? r.hi : r.lo;
+  if (s) {
+    if (door && excess > FEEL.EXIT_PUSH) { var w2 = recent(d, 60), fv = Math.abs((A === 'x' ? w2.x : w2.y) / Math.max(w2.dt, 8)) * 1000 / cs; launchShip(d, s, Math.max(4, fv)); return; }
+    shown = door ? lim + s * Math.min(.3, excess * FEEL.DOOR_PEEK) : lim;
+    d.press = door ? 0 : Math.min(1, excess * 1.6); d.pressDir = s;
+  } else { shown = clamp(want, r.lo, r.hi); d.press = 0; }
+  var delta = shown - fA;
+  fA = Math.abs(delta) < .15 ? shown : fA + delta * Math.min(1, FEEL.CATCH_RATE * dt);
+  var v = dt > 0 ? (fA - prev) / dt : 0;
+  // --- impact against a wall / crate (continuous: fA never leaves [lo, hi]) ---
+  if (s && !door && Math.abs(fA - lim) < 1e-3) {
+    if (d.contact !== s) { d.contact = s; var iv = Math.max(Math.abs(v), Math.abs(d.vel)); if (iv > FEEL.BUMP_V) impact(p, A, s, iv); }
+  } else if (d.contact && Math.abs(fA - (d.contact > 0 ? r.hi : r.lo)) > .08) d.contact = 0;
+  if (dt > 0) d.vel = d.vel * .4 + v * .6;
+  setF(d, fA);
+  var c = Math.round(fA); if (c !== d.lastCell) { d.lastCell = c; d.steps++; SFX.step(d.steps); tickBuzz(); }
 }
-function stepAxis(ax, dd) {
-  var d = drag, p = d.p, o = ax === 'x' ? d.ox : d.oy;
-  o = Math.max(-1, Math.min(1, o + dd));
-  if (o !== 0 && (ax === 'x' ? d.ox : d.oy) !== 0 && Math.sign(o) !== Math.sign(ax === 'x' ? d.ox : d.oy)) o = 0; // crossed back over the cell line
-  if (Math.abs(o) >= 1) { if (ax === 'x') p.x += Math.sign(o); else p.y += Math.sign(o); o = 0; d.steps++; SFX.step(d.steps); }
-  if (ax === 'x') d.ox = o; else d.oy = o;
+function impact(p, ax, s, v) {
+  var amt = Math.min(1, v / 14);
+  p.sq = { ax: ax, s: s, amt: .35 + amt * .65, t: 0 };
+  SFX.bump(); buzz(Math.round(10 + 14 * amt));
+  if (amt > .6) shake = Math.max(shake, .05);
+}
+function commitMove(d, dest) {
+  var p = d.p;
+  if (d.ax === 'x') { p.x = dest; p.y = d.by; } else { p.y = dest; p.x = d.bx; }
+  var moved = p.x !== d.x0 || p.y !== d.y0;
+  if (moved) { pushUndo(d.before); moves++; }
+  syncHud();
+  return moved;
+}
+function endDrag(e, noFling) {
+  if (!drag || (e && e.pointerId !== drag.id)) return;
+  var d = drag, p = d.p;
+  var upT = e ? e.timeStamp : performance.now();
+  if (e && e.type === 'pointerup') {
+    var ls = d.samples[d.samples.length - 1];
+    if (Math.abs(ls.x - e.clientX) > .5 || Math.abs(ls.y - e.clientY) > .5) d.samples.push({ t: e.timeStamp, x: e.clientX, y: e.clientY });
+    d.fingerX = e.clientX; d.fingerY = e.clientY;
+  }
+  // a quick flick can begin and end between two frames: lock + catch up to the last finger position first
+  if (!noFling) { steer(1 / 60); if (drag !== d) return; }
+  drag = null;
+  if (!d.ax) { p.vx = p.x; p.vy = p.y; return; }
+  var A = d.ax, r = d.r, fA = A === 'x' ? d.fx : d.fy;
+  var w = recent(d, FEEL.FLICK_WIN), rest = upT - d.samples[d.samples.length - 1].t;
+  var vA = rest > FEEL.REST_MS ? 0 : (A === 'x' ? w.x : w.y) / Math.max(w.dt, 8);  // finger rested before lifting: no flick
+  var s = vA >= 0 ? 1 : -1, lim = s > 0 ? r.hi : r.lo, door = s > 0 ? r.dHi : r.dLo;
+  lastRelease = { ax: A, fA: fA, vA: vA, win: w, r: { lo: r.lo, hi: r.hi, dLo: !!r.dLo, dHi: !!r.dHi }, rest: rest };
+  if (!noFling && !d.aligning && Math.abs(vA) >= FEEL.FLICK_PXMS && (s * (lim - fA) > .02 || door)) {
+    var v0 = clamp(Math.abs(vA) * 1000 / G.cs * FEEL.GLIDE_GAIN, FEEL.GLIDE_MIN, FEEL.GLIDE_MAX);
+    var reach = v0 * v0 / (2 * FEEL.FRICTION), toLim = s * (lim - fA);
+    if (reach >= toLim) {
+      if (door) { launchShip(d, s, v0); return; }
+      commitMove(d, lim);
+      p.mot = { k: 'glide', ax: A, from: fA, to: lim, s: s, v0: v0, a: FEEL.FRICTION, t: 0, hit: Math.sqrt(Math.max(0, v0 * v0 - 2 * FEEL.FRICTION * toLim)), cell: Math.round(fA) };
+      return;
+    }
+    var dest = clamp(Math.round(fA + s * reach), r.lo, r.hi), D = s * (dest - fA);
+    if (D > .05) {
+      if (commitMove(d, dest)) {}
+      p.mot = { k: 'glide', ax: A, from: fA, to: dest, s: s, v0: v0, a: v0 * v0 / (2 * D), t: 0, hit: 0, cell: Math.round(fA) };
+      return;
+    }
+  }
+  // gentle release: spring onto the nearest cell (slight overshoot, never into a neighbour)
+  var dest2 = d.aligning ? d.aligning.k : clamp(Math.round(fA), r.lo, r.hi);
+  if (commitMove(d, dest2)) { SFX.drop(); buzz(6); }
+  p.mot = { k: 'spring', ax: A, x: fA, v: clamp(d.vel, -12, 12), to: dest2, lo: r.lo, hi: r.hi };
+}
+cv.addEventListener('pointerup', function (e) { endDrag(e, false); });
+cv.addEventListener('pointercancel', function (e) { endDrag(e, true); });
+cv.addEventListener('lostpointercapture', function (e) { endDrag(e, true); });
+/* visual-only motion after release (logical state is already committed) */
+function stepMot(p, dt) {
+  var m = p.mot, pos;
+  if (m.k === 'spring') {
+    var n = Math.max(1, Math.ceil(dt / .006)), h = dt / n, w = FEEL.SPRING_W, z = FEEL.SPRING_Z;
+    for (var i = 0; i < n; i++) { m.v += (-w * w * (m.x - m.to) - 2 * z * w * m.v) * h; m.x += m.v * h; }
+    if (m.x > m.hi) { m.x = m.hi; if (m.v > 0) m.v = 0; }
+    if (m.x < m.lo) { m.x = m.lo; if (m.v < 0) m.v = 0; }
+    pos = m.x;
+    if (Math.abs(m.x - m.to) < .002 && Math.abs(m.v) < .03) { pos = m.to; p.mot = null; }
+  } else {
+    m.t += dt;
+    var trav = m.v0 * m.t - .5 * m.a * m.t * m.t, D = Math.abs(m.to - m.from);
+    if (trav >= D || m.v0 - m.a * m.t <= 0) { pos = m.to; p.mot = null; if (m.hit > FEEL.BUMP_V) impact(p, m.ax, m.s, m.hit); else { SFX.drop(); buzz(6); } }
+    else pos = m.from + m.s * trav;
+    var c = Math.round(pos); if (c !== m.cell) { m.cell = c; SFX.step(c); tickBuzz(); }
+  }
+  if (m.ax === 'x') { p.vx = pos; p.vy = p.y; } else { p.vy = pos; p.vx = p.x; }
 }
 
-/* ---------- shipping ---------- */
-function shipOut(p, door, sx, sy) {
-  var d = drag; drag = null;
+/* ---------- shipping: the door grabs the crate and pulls it through ---------- */
+function launchShip(d, s, v0) {
+  var p = d.p, A = d.ax, r = d.r, lim = s > 0 ? r.hi : r.lo, door = s > 0 ? r.dHi : r.dLo, fA = A === 'x' ? d.fx : d.fy;
+  drag = null;
+  if (A === 'x') { p.x = lim; p.y = d.by; } else { p.y = lim; p.x = d.bx; }
   pushUndo(d.before); moves++;
   var col = BS.color(p), res = BS.ship(st, p);
-  combo = comboT > 0 ? combo + 1 : 0; comboT = 2.6;
-  doorFx[door.id] = 1;
-  var px = p.x, py = p.y;
-  if (res === 'gone') {
-    anims.push({ kind: 'exit', p: p, col: col, x: px, y: py, sx: sx, sy: sy, t: 0, dist: (sx ? p.bw : p.bh) + .2, door: door });
-    SFX.ship(combo); buzz([12, 30, 18]);
-  } else {
-    anims.push({ kind: 'peel', p: p, col: col, x: px, y: py, sx: sx, sy: sy, t: 0, door: door, block: true });
-    SFX.peel(); buzz(20);
-  }
-  var c = doorMouth(door, p, px, py);
-  burst(c[0], c[1], PAL[col].f, 26, sx, sy);
-  floaters.push({ x: c[0] - sx * 30, y: c[1] - sy * 30, t: 0, txt: combo > 0 ? 'x' + (combo + 1) + '!' : '+1', col: PAL[col].l });
-  checkEvents();
+  var an = { p: p, col: col, ax: A, s: s, sx: A === 'x' ? s : 0, sy: A === 'y' ? s : 0, from: fA, x: p.x, y: p.y, v0: v0, t: 0, door: door,
+    pre: Math.max(0, s * (lim - fA)), fired: false };
+  if (res === 'gone') { an.kind = 'exit'; an.dist = s * (lim - fA) + (A === 'x' ? p.bw : p.bh) + .2; }
+  else { an.kind = 'peel'; an.block = true; }
+  p.vx = p.x; p.vy = p.y; p.mot = null; p.sq = null;
+  anims.push(an);
   syncHud();
+}
+function shipFx(an) {
+  an.fired = true;
+  combo = comboT > 0 ? combo + 1 : 0; comboT = 2.6;
+  doorFx[an.door.id] = 1;
+  var c = doorMouth(an.door, an.p, an.x, an.y);
+  burst(c[0], c[1], PAL[an.col].f, 26, an.sx, an.sy);
+  floaters.push({ x: c[0] - an.sx * 30, y: c[1] - an.sy * 30, t: 0, txt: combo > 0 ? 'x' + (combo + 1) + '!' : '+1', col: PAL[an.col].l });
+  if (an.kind === 'exit') { SFX.ship(combo); buzz([12, 30, 18]); } else { SFX.peel(); buzz(20); }
+  checkEvents(); syncHud();
 }
 function doorMouth(door, p, px, py) {
   var cs = G.cs, a = 0, n = 0;
@@ -712,7 +881,7 @@ function pieceCenter(p) {
   return [G.ox + (p.vx + sx / p.cells.length) * G.cs, G.oy + (p.vy + sy / p.cells.length) * G.cs];
 }
 function useLift(p) {
-  liftArmed = false; lift = 0;
+  liftArmed = false; lift = 0; p.mot = null;
   pushUndo(snap()); moves++;
   var col = BS.color(p); p.li = p.colors.length - 1; st.shipped++; st.by[col] = (st.by[col] || 0) + 1; p.alive = false;
   var c = pieceCenter(p);
@@ -875,6 +1044,24 @@ function drawCrate(p, X, Y, cs, o) {
 }
 
 /* ---------- board ---------- */
+/* squash on impact / pressing into a wall, plus a slight pick-up swell */
+function squashOf(p, dt, lift) {
+  var k = 0, ax = null, s = 0;
+  if (p.sq) { p.sq.t += dt; k = p.sq.amt * Math.exp(-p.sq.t * 13) * Math.cos(p.sq.t * 38); ax = p.sq.ax; s = p.sq.s; if (p.sq.t > .5) p.sq = null; }
+  if (drag && drag.p === p && drag.press) { var pk = drag.press * .45; if (pk > Math.abs(k)) { k = pk; ax = drag.ax; s = drag.pressDir; } }
+  var up = 1 + (lift || 0) * .035;
+  if (!ax) return up !== 1 ? { ax: 'x', s: 0, along: up, perp: up } : null;
+  return { ax: ax, s: s, along: (1 - k * .16) * up, perp: (1 + k * .08) * up };
+}
+function drawPiece(p, X, Y, cs, tf, o) {
+  if (!tf) return drawCrate(p, X, Y, cs, o);
+  var w = p.bw * cs, h = p.bh * cs;
+  var px = tf.ax === 'x' ? (tf.s > 0 ? X + w : tf.s < 0 ? X : X + w / 2) : X + w / 2;
+  var py = tf.ax === 'y' ? (tf.s > 0 ? Y + h : tf.s < 0 ? Y : Y + h / 2) : Y + h / 2;
+  ctx.save(); ctx.translate(px, py);
+  ctx.scale(tf.ax === 'x' ? tf.along : tf.perp, tf.ax === 'y' ? tf.along : tf.perp);
+  ctx.translate(-px, -py); drawCrate(p, X, Y, cs, o); ctx.restore();
+}
 function solidAt(x, y) { return x < 0 || y < 0 || x >= st.w || y >= st.h || st.kind[y * st.w + x] === 2; }
 function drawBoard() {
   var cs = G.cs, F = G.F, ox = G.ox, oy = G.oy;
@@ -995,6 +1182,7 @@ function drawDoors(dt) {
 }
 
 /* ---------- main loop ---------- */
+var perf = { work: [], dts: [], push: function (w, d) { this.work.push(w); this.dts.push(d); if (this.work.length > 600) { this.work.shift(); this.dts.shift(); } } };
 function frame(now) {
   var dt = Math.min(.05, (now - lastT) / 1000); lastT = now; pulse += dt;
   bumpCool -= dt; comboT -= dt;
@@ -1010,7 +1198,10 @@ function frame(now) {
     }
     if (Math.floor(pulse * 10) !== Math.floor((pulse - dt) * 10)) syncHud();
   }
+  var t0 = performance.now();
+  if (drag && mode === 'play' && st) steer(dt);
   draw(dt);
+  perf.push(performance.now() - t0, dt * 1000);
   requestAnimationFrame(frame);
 }
 function draw(dt) {
@@ -1034,32 +1225,41 @@ function draw(dt) {
   // static crates
   st.pieces.forEach(function (p) {
     if (!p.alive || anims.some(function (a) { return a.p === p && a.kind === 'peel'; })) return;
+    if (drag && drag.p === p) return; // drawn last, on top
     var tx = p.x, ty = p.y;
-    if (drag && drag.p === p) { tx += drag.ox; ty += drag.oy; p.vx = tx; p.vy = ty; }
+    if (p.mot) stepMot(p, dt);
     else { var k = Math.min(1, dt * 22); p.vx += (tx - p.vx) * k; p.vy += (ty - p.vy) * k; if (Math.abs(p.vx - tx) < .002) p.vx = tx; if (Math.abs(p.vy - ty) < .002) p.vy = ty; }
-    if (drag && drag.p === p) return; // draw dragged last
     p.pop = Math.max(0, p.pop - dt * 3); p.thawT = Math.max(0, p.thawT - dt * 1.6);
     var fz = BS.frozen(st, p), jig = p.pop ? Math.sin(p.pop * 30) * p.pop * 3 : 0;
-    drawCrate(p, G.ox + p.vx * cs + jig, G.oy + p.vy * cs, cs, { frost: fz || p.thawT > 0, frostA: fz ? 1 : p.thawT, frostN: fz ? BS.frostLeft(st, p) : 0, sel: liftArmed && Math.sin(pulse * 8) > 0 });
+    drawPiece(p, G.ox + p.vx * cs + jig, G.oy + p.vy * cs, cs, squashOf(p, dt, 0), { frost: fz || p.thawT > 0, frostA: fz ? 1 : p.thawT, frostN: fz ? BS.frostLeft(st, p) : 0, sel: liftArmed && Math.sin(pulse * 8) > 0 });
   });
-  if (drag) { var p = drag.p; drawCrate(p, G.ox + p.vx * cs, G.oy + p.vy * cs, cs, { lift: 1 }); }
+  if (drag) { var p = drag.p; drawPiece(p, G.ox + p.vx * cs, G.oy + p.vy * cs, cs, squashOf(p, dt, drag.lift), { lift: drag.lift }); }
   // animations
   for (var j = anims.length - 1; j >= 0; j--) {
     var an = anims[j]; an.t += dt;
     if (an.kind === 'exit') {
-      var spd = 13, off = Math.min(an.dist, an.t * an.t * 60 + an.t * spd);
-      var X = G.ox + (an.x + an.sx * off) * cs, Y = G.oy + (an.y + an.sy * off) * cs;
+      var trav = an.v0 * an.t + .5 * FEEL.SUCK_ACC * an.t * an.t;
+      if (!an.fired && trav >= an.pre) shipFx(an);
+      var off = Math.min(an.dist, trav), spd = an.v0 + FEEL.SUCK_ACC * an.t, str = Math.min(.2, spd * .005);
+      var ex = an.ax === 'x' ? an.from + an.s * off : an.x, ey = an.ax === 'y' ? an.from + an.s * off : an.y;
       ctx.save(); ctx.beginPath(); ctx.rect(G.ox, G.oy, G.bw, G.bh); ctx.clip();
-      drawCrate(an.p, X, Y, cs, { col: an.col, lift: .5 });
+      drawPiece(an.p, G.ox + ex * cs, G.oy + ey * cs, cs, { ax: an.ax, s: 0, along: 1 + str, perp: 1 - str * .45 }, { col: an.col, lift: .5 });
       ctx.restore();
-      if (Math.random() < .7) { var m = doorMouth(an.door, an.p, an.x, an.y); parts.push({ x: m[0] + (Math.random() - .5) * cs * .8 * (an.sy ? 1 : 0), y: m[1] + (Math.random() - .5) * cs * .8 * (an.sx ? 1 : 0), vx: an.sx * (120 + Math.random() * 160) + (Math.random() - .5) * 80, vy: an.sy * (120 + Math.random() * 160) + (Math.random() - .5) * 80, life: .35, t: 0, r: 2 + Math.random() * 2.5, col: PAL[an.col].l, sq: true }); }
+      if (an.fired && Math.random() < .7) { var m = doorMouth(an.door, an.p, an.x, an.y); parts.push({ x: m[0] + (Math.random() - .5) * cs * .8 * (an.sy ? 1 : 0), y: m[1] + (Math.random() - .5) * cs * .8 * (an.sx ? 1 : 0), vx: an.sx * (120 + Math.random() * 160) + (Math.random() - .5) * 80, vy: an.sy * (120 + Math.random() * 160) + (Math.random() - .5) * 80, life: .35, t: 0, r: 2 + Math.random() * 2.5, col: PAL[an.col].l, sq: true }); }
       if (off >= an.dist) { anims.splice(j, 1); shake = Math.max(shake, .06); }
     } else if (an.kind === 'peel') {
-      var u = Math.min(1, an.t / .38), push = u < .45 ? (u / .45) * .45 : .45 * (1 - (u - .45) / .55);
-      var X2 = G.ox + (an.x + an.sx * push) * cs, Y2 = G.oy + (an.y + an.sy * push) * cs;
-      drawCrate(an.p, X2, Y2, cs, { col: u < .45 ? an.col : null });
-      if (u >= .45 && !an.torn) { an.torn = true; var c2 = pieceCenter(an.p); burst(c2[0], c2[1], '#ffffff', 16); burst(c2[0], c2[1], PAL[an.col].f, 14); }
-      if (u >= 1) anims.splice(j, 1);
+      var tv = an.v0 * an.t + .5 * FEEL.SUCK_ACC * an.t * an.t;
+      if (!an.fired && tv < an.pre) {
+        var pfx = an.ax === 'x' ? an.from + an.s * tv : an.x, pfy = an.ax === 'y' ? an.from + an.s * tv : an.y;
+        drawCrate(an.p, G.ox + pfx * cs, G.oy + pfy * cs, cs, { col: an.col, lift: .5 });
+      } else {
+        if (!an.fired) { shipFx(an); an.t0 = an.t; }
+        var u = Math.min(1, (an.t - an.t0) / .38), push = u < .45 ? (u / .45) * .45 : .45 * (1 - (u - .45) / .55);
+        var X2 = G.ox + (an.x + an.sx * push) * cs, Y2 = G.oy + (an.y + an.sy * push) * cs;
+        drawCrate(an.p, X2, Y2, cs, { col: u < .45 ? an.col : null });
+        if (u >= .45 && !an.torn) { an.torn = true; var c2 = pieceCenter(an.p); burst(c2[0], c2[1], '#ffffff', 16); burst(c2[0], c2[1], PAL[an.col].f, 14); }
+        if (u >= 1) anims.splice(j, 1);
+      }
     } else if (an.kind === 'lift') {
       var u2 = Math.min(1, an.t / .5);
       drawCrate(an.p, G.ox + an.p.vx * cs, G.oy + an.p.vy * cs - u2 * cs * 2.2, cs, { col: an.col, alpha: 1 - u2, lift: 1 });
@@ -1163,7 +1363,8 @@ if (/^https?:$/.test(location.protocol)) {
 /* debug / test hooks */
 window.__game = {
   get st() { return st; }, get mode() { return mode; }, get G() { return G; }, get timeLeft() { return timeLeft; }, LEVELS: LEVELS, BS: BS,
-  startLevel: startLevel, undo: undo,
+  get drag() { return drag; }, get lastRelease() { return lastRelease; }, get anims() { return anims; }, get moves() { return moves; }, get undoDepth() { return undoStack.length; },
+  FEEL: FEEL, perf: perf, startLevel: startLevel, undo: undo,
   cellCenter: function (x, y) { return [G.ox + (x + .5) * G.cs, G.oy + (y + .5) * G.cs]; },
   unlockAll: function () { save.unlocked = LEVELS.length; writeSave(); }
 };

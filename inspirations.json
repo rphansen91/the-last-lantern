@@ -19,6 +19,10 @@
           "https://rollic.helpshift.com/hc/en/24-color-block-jam/faq/1234-obstacles-in-color-block-jam/",
           "https://rollic.helpshift.com/hc/en/24-color-block-jam/faq/1232-what-is-a-booster-what-are-they-for/"
         ]
+      },
+      "v3": {
+        "date": "2026-10-07",
+        "notes": "Feel pass after playtest feedback that input was less tactile than the source. Added magnetic one-axis rails with hysteresis and aligned corner turns, a sine detent at cell lines, 1:1 finger tracking, momentum flicks with friction, swept collision, spring settle, impact squash, cell-crossing haptic ticks, and accelerating suck-out through doors. Level rules and content are unchanged."
       }
     }
   ]

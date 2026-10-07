@@ -1,5 +1,5 @@
 /* Bayshift — offline cache. Bump VERSION on ship. */
-const VERSION = 'bayshift-v2';
+const VERSION = 'bayshift-v3';
 const SHELL = [
   './',
   './index.html',
