@@ -1,0 +1,21 @@
+{
+  "arcade": {
+    "name": "Night Arcade",
+    "tagline": "Small games for dark hours.",
+    "accent": "#6ec8ff"
+  },
+  "games": [
+    {
+      "id": "the-last-lantern",
+      "title": "The Last Lantern",
+      "blurb": "Oil runs low in the catacombs. The watchers wait past the edge of the light.",
+      "description": "A mobile-first atmospheric exploration game. Descend three procedurally generated depths with a lantern that keeps burning low. Collect lore, solve light puzzles, and keep the flame from going out — because when it dies, the watchers close in.",
+      "how": "Walk with a floating stick (lower half of the screen). Aim your gaze with a drag in the upper half. Hold Raise to widen the light (burns oil faster) or Lower to shrink it to an ember. Use interacts with braziers, mirrors, and seals. Find the stair at each depth after solving its light puzzle.",
+      "tags": ["atmospheric", "exploration", "horror"],
+      "status": "playable",
+      "path": "games/the-last-lantern/",
+      "cover": "games/the-last-lantern/screenshots/m-play.png",
+      "accent": "#6ec8ff"
+    }
+  ]
+}
