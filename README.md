@@ -13,6 +13,7 @@ icons/                procedural dark / grainy / cyan arcade icons
 games/
   the-last-lantern/   atmospheric horror exploration
   bayshift/           timed crate-escape puzzle (midnight dock)
+  moonroost/          one-owl-per-grove logic puzzle (night wood)
 screenshots/          arcade UI captures (phone viewport)
 tools/arcade-icons.html  re-render arcade icons in headless Chrome
 ```

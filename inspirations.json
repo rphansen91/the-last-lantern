@@ -24,6 +24,27 @@
         "date": "2026-10-07",
         "notes": "Feel pass after playtest feedback that input was less tactile than the source. Added magnetic one-axis rails with hysteresis and aligned corner turns, a sine detent at cell lines, 1:1 finger tracking, momentum flicks with friction, swept collision, spring settle, impact squash, cell-crossing haptic ticks, and accelerating suck-out through doors. Level rules and content are unchanged."
       }
+    },
+    {
+      "date": "2026-10-07",
+      "sourceTitle": "Meowdoku!",
+      "sourceChart": "US App Store Top Free Games #1 (observed 2026-10-07 via itunes.apple.com/us/rss/topfreeapplications/genre=6014)",
+      "sourceDeveloper": "Oakever Games",
+      "why": "It's the #1 free game in the US right now (about 295k ratings at 4.8). It's a pure deduction grid puzzle in the region-queens family, which adds real variety next to Night Arcade's horror exploration and block-escape titles. Its loop of tap to cross out, double-tap to commit, and a 3-heart mistake budget translates faithfully into a zero-dependency canvas game.",
+      "newSlug": "moonroost",
+      "newTitle": "Moonroost",
+      "notes": "Core loop kept close to the source. It uses an n\u00d7n board with n colored regions, one piece per row, column, and region, and no two pieces touching (8-neighborhood). Every board has a unique solution solvable by logic. Single tap toggles a cross, drag paints or erases crosses, and double-tap commits a piece. A correct piece locks and can't be removed, and a wrong commit costs one of 3 lives. At 0 lives you can retry, or take one revive (the source uses a rewarded ad; ours is free). The game has a count-up timer with best time, Undo / Hint / Reset buttons, and a hint that first flags mistakes and then explains a forced move. The campaign mixes sizes from 5\u00d75 to 10\u00d710 non-monotonically, and there's a daily puzzle with a streak. Original elements are the name, fiction (owls roosting in moonlit groves of the Hush Wood), lives as moons, the procedural canvas owl art, WebAudio hoots and ticks, and the copy. Additions for feel include magnetic row/column rails on drag-paint, a press squash and spring, X stamp overshoot, owl drop-and-squash, an auto-cross ripple outward from each owl, eyes that track the finger, and haptic ticks. No source names, cats, art, audio, logos, or trademarked terms are used in the game or catalog.",
+      "researchSources": [
+        "https://apps.apple.com/us/app/meowdoku/id6761760135",
+        "https://itunes.apple.com/us/rss/customerreviews/id=6761760135/sortBy=mostRecent/json",
+        "https://play.google.com/store/apps/details?hl=en_US&id=com.oakever.meowdoku",
+        "https://meowdoku.app/wiki/how-to-play-meowdoku",
+        "https://meowdoku.co/how-to-play/",
+        "https://meowdoku.us/how-to-play",
+        "https://meowdoku.run/levels",
+        "https://meowdoku.run/how-to-play",
+        "https://www.appireview.com/com.oakever.meowdoku"
+      ]
     }
   ]
 }

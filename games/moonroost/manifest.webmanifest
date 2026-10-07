@@ -1,0 +1,15 @@
+{
+  "name": "Moonroost",
+  "short_name": "Moonroost",
+  "description": "Settle one owl in every moonlit grove. Owls never share a row or column, and never touch.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#090b14",
+  "theme_color": "#090b14",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

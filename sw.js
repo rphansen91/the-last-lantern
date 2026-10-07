@@ -1,7 +1,7 @@
 /* Night Arcade — service worker.
    Caches the shell + catalog + listed game shells so the library works offline.
    Bump VERSION when shipping shell or catalog changes. */
-const VERSION = 'night-arcade-v4';
+const VERSION = 'night-arcade-v5';
 const SHELL = [
   './',
   './index.html',
@@ -31,7 +31,16 @@ const SHELL = [
   './games/bayshift/icons/icon-maskable-512.png',
   './games/bayshift/icons/apple-touch-icon.png',
   './games/bayshift/icons/favicon-32.png',
-  './games/bayshift/screenshots/cover.png'
+  './games/bayshift/screenshots/cover.png',
+  './games/moonroost/',
+  './games/moonroost/index.html',
+  './games/moonroost/manifest.webmanifest',
+  './games/moonroost/icons/icon-192.png',
+  './games/moonroost/icons/icon-512.png',
+  './games/moonroost/icons/icon-maskable-512.png',
+  './games/moonroost/icons/apple-touch-icon.png',
+  './games/moonroost/icons/favicon-32.png',
+  './games/moonroost/screenshots/cover.png'
 ];
 
 self.addEventListener('install', e => {
