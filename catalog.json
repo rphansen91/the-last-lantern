@@ -24,13 +24,14 @@
     {
       "id": "bayshift",
       "title": "Bayshift",
-      "blurb": "Slide glowing freight crates into matching bay doors before the night shift ends.",
-      "description": "A mobile-first sliding puzzle on a midnight dock. Swipe crates across the bay grid \u2014 they keep moving until they hit a wall, another crate, or a door. Matching doors ship the load with a satisfying clear; wrong colors block like steel. Ten handcrafted bays that ramp from a straight shot to a rush-hour jam.",
-      "how": "Swipe a crate to slide it. Tap to select, then swipe (or use arrow keys / WASD on desktop). Undo backs out of a jam; Reset reloads the bay. Clear every crate to clock out and unlock the next level.",
+      "blurb": "Drag chunky freight crates out through bay doors of their color, before the ferry whistle blows.",
+      "description": "A mobile-first, timed block-escape puzzle on a midnight dock. Crates come in multi-cell shapes and move freely under your finger. Each one ships only through a bay door of its own color, and only if it fits through the door. Plan a route through a packed deck, park crates out of the way, and beat the clock. Eighteen handcrafted bays ramp from a single straight shot to full night-rush jams with frosted crates, rail-locked crates, shrink-wrapped crates that need two doors, and roller shutters that open only after enough loads of their color have shipped.",
+      "how": "Drag a crate with your finger. It slides through any open lane, cell by cell, and stops at bollards, walls and other crates. Push it into a bay door of the same color to ship it, but every row or column it covers has to fit inside the door. The clock starts on your first drag, and shipping everything with time to spare earns 3 stars. Frosted crates thaw after the number of loads shown. Railed crates only move along their track. Wrapped crates peel off one layer per door and show the color underneath. A shuttered door opens after its counter of matching loads is met. Undo is unlimited. Break freezes the clock for 10 seconds and Lift removes one crate; each can be used once per bay. If time runs out, you can take one 30-second overtime.",
       "tags": [
         "puzzle",
         "casual",
-        "spatial"
+        "spatial",
+        "timed"
       ],
       "status": "playable",
       "path": "games/bayshift/",

@@ -4,11 +4,22 @@
       "date": "2026-10-06",
       "sourceTitle": "Block Out! - Color Sort Puzzle",
       "sourceChart": "US App Store Top Free Games #2 (observed Oct 2026)",
-      "sourceDeveloper": "Grand Games A.Ş.",
-      "why": "Spatial color-matching and slide-to-clear loop is hugely addictive; Night Arcade only had atmospheric horror exploration — a polished casual puzzle rounds out the catalog.",
+      "sourceDeveloper": "Grand Games A.\u015e.",
+      "why": "Its spatial drag-the-block-to-the-matching-door loop, played against a timer, is hugely addictive. Night Arcade only had atmospheric horror exploration, so a polished casual puzzle rounds out the catalog.",
       "newSlug": "bayshift",
       "newTitle": "Bayshift",
-      "notes": "Reimagined as midnight freight: slide glowing crates into matching bay doors. No Block Out name, art, characters, or trademarked terms used."
+      "notes": "v1 (2026-10-06) used swipe-to-slide 1x1 crates, which was too loose. v2 rework (2026-10-06) follows the source's core loop much more closely. Crates are multi-cell shapes moved with direct drag. Each color has edge bay doors, and a crate passes only if every row or column it covers fits inside the door span. There is a per-level countdown with no move limit, plus unlimited undo. Obstacles map to genre staples under our own fiction: frost (ice/freeze counter), rail (one-axis arrows), shrink-wrap (multilayer), roller shutter (locked/color shutter), and bollards and voids (irregular boards). Boosters are Break (freeze the clock 10s) and Lift (remove one crate), with one +30s overtime on fail. There are 18 handcrafted bays, all checked by tools/solve.js. Own name, fiction (night freight dock), art (procedural canvas crates), audio (WebAudio synth) and copy. No Block Out names, assets, characters or trademarked terms are used.",
+      "v2": {
+        "date": "2026-10-06",
+        "researchSources": [
+          "https://apps.apple.com/us/app/block-out-color-sort-puzzle/id6752672568",
+          "https://apps.apple.com/gb/app/block-out-color-sort-puzzle/id6752672568?platform=iphone&see-all=reviews",
+          "https://unstar.app/app/6752672568?country=en-US&platform=ios",
+          "https://colorblockjam.net/faqs/gameplay/",
+          "https://rollic.helpshift.com/hc/en/24-color-block-jam/faq/1234-obstacles-in-color-block-jam/",
+          "https://rollic.helpshift.com/hc/en/24-color-block-jam/faq/1232-what-is-a-booster-what-are-they-for/"
+        ]
+      }
     }
   ]
 }

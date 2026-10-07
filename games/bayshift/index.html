@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#0a0c12">
+<meta name="theme-color" content="#07090e">
 <meta name="color-scheme" content="dark">
-<meta name="description" content="Slide glowing freight crates into matching bay doors before the night shift ends.">
+<meta name="description" content="Drag freight crates out through matching bay doors before the whistle blows.">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,963 +15,1160 @@
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <style>
-:root {
-  --bg:#080a10; --ink:#d8dee8; --dim:#7a8496; --muted:#4a5263;
-  --line:rgba(180,200,230,.12); --accent:#ffb454; --accent2:#6ec8ff;
-  --panel:rgba(12,16,24,.92);
-}
+:root{--bg:#07090e;--ink:#e3e8f0;--dim:#8691a3;--muted:#4c5567;--line:rgba(180,200,230,.13);--amber:#ffb341;--red:#ff5d5d}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;width:100%;height:100%;height:100dvh;background:var(--bg);overflow:hidden;
-  color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  -webkit-user-select:none;user-select:none;touch-action:none;
-  -webkit-touch-callout:none;-webkit-text-size-adjust:100%}
+html,body{margin:0;width:100%;height:100%;height:100dvh;background:var(--bg);overflow:hidden;color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-user-select:none;user-select:none;touch-action:none;
+  -webkit-touch-callout:none;-webkit-text-size-adjust:100%;overscroll-behavior:none}
 body{position:fixed;inset:0}
-body::after{content:'';position:fixed;inset:-40px;pointer-events:none;z-index:60;opacity:.07;
+body::after{content:'';position:fixed;inset:-40px;pointer-events:none;z-index:60;opacity:.06;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
   animation:grain .5s steps(2) infinite}
 @keyframes grain{0%{transform:translate(0,0)}50%{transform:translate(-14px,9px)}100%{transform:translate(0,0)}}
-canvas#c{display:block;position:fixed;inset:0;z-index:1}
-.overlay{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  text-align:center;padding:calc(20px + env(safe-area-inset-top,0px)) calc(22px + env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) calc(22px + env(safe-area-inset-left,0px));
-  background:radial-gradient(90% 70% at 50% 0%,rgba(255,180,84,.10),transparent 55%),rgba(6,8,14,.94);
-  transition:opacity .55s ease}
-.overlay.hidden{opacity:0;pointer-events:none}
-.eyebrow{font-size:11px;letter-spacing:.42em;text-transform:uppercase;color:var(--accent);margin:0 0 1.1em;opacity:.9}
-h1{font-weight:600;letter-spacing:.18em;font-size:clamp(28px,8vw,44px);margin:0 0 .35em;color:#f2f5fa;
-  text-shadow:0 0 28px rgba(255,180,84,.22)}
-.lede{max-width:28em;color:var(--dim);line-height:1.65;font-size:clamp(14px,3.6vw,16px);margin:0 0 1.8em;font-style:italic}
-.hint{color:var(--muted);font-size:12px;letter-spacing:.06em;line-height:1.8;margin:1.6em 0 0}
-.hint b{color:#9aa6b8;font-weight:500;border:1px solid #2a3344;padding:1px 7px;border-radius:4px;font-size:11px}
-button.cta{font:inherit;background:transparent;color:#f0e6d4;border:1px solid rgba(255,180,84,.45);
-  padding:14px 34px;letter-spacing:.22em;min-height:50px;font-size:13px;text-transform:uppercase;
-  cursor:pointer;border-radius:999px;touch-action:manipulation;
-  box-shadow:0 0 0 0 rgba(255,180,84,.0);transition:border-color .25s,box-shadow .25s,transform .1s,background .25s}
-button.cta:active{transform:scale(.97)}
-button.cta:hover,button.cta:focus{outline:none;border-color:rgba(255,180,84,.85);
-  background:rgba(255,180,84,.08);box-shadow:0 0 32px rgba(255,180,84,.12)}
-.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:1.2em}
-button.ghost{font:inherit;background:transparent;color:var(--dim);border:1px solid #2a3344;
-  padding:10px 18px;letter-spacing:.14em;font-size:12px;text-transform:uppercase;border-radius:999px;
-  min-height:44px;cursor:pointer;touch-action:manipulation}
-button.ghost:active{transform:scale(.97)}
-#hud{position:fixed;left:0;right:0;top:0;z-index:5;display:none;pointer-events:none;
-  padding:calc(10px + env(safe-area-inset-top,0px)) calc(12px + env(safe-area-inset-right,0px)) 0 calc(12px + env(safe-area-inset-left,0px))}
-body[data-mode=play] #hud{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-.chip{pointer-events:auto;background:rgba(8,12,18,.72);border:1px solid var(--line);border-radius:999px;
-  padding:8px 12px;font-size:12px;letter-spacing:.08em;color:#b8c2d0;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-  min-height:40px;display:inline-flex;align-items:center;gap:8px;touch-action:manipulation;cursor:pointer}
-.chip strong{color:var(--accent);font-weight:600}
-.chip.icon{width:40px;justify-content:center;padding:0}
-#dock{position:fixed;left:0;right:0;bottom:0;z-index:5;display:none;pointer-events:none;
-  padding:0 calc(14px + env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) calc(14px + env(safe-area-inset-left,0px))}
-body[data-mode=play] #dock{display:flex;justify-content:center;gap:10px}
-#dock .chip{min-width:92px;justify-content:center}
-.winbox{max-width:22em}
-.winbox .stats{color:var(--dim);letter-spacing:.1em;font-size:13px;margin:0 0 1.4em}
-.lvl-grid{display:grid;grid-template-columns:repeat(4,minmax(52px,1fr));gap:8px;max-width:280px;width:100%;margin:0 auto 1.4em}
-.lvl-grid button{aspect-ratio:1;border-radius:12px;border:1px solid #2a3344;background:rgba(14,18,28,.8);
-  color:#c5cedb;font:600 14px/1 system-ui;cursor:pointer;touch-action:manipulation}
-.lvl-grid button.on{border-color:rgba(255,180,84,.7);color:var(--accent);box-shadow:0 0 18px rgba(255,180,84,.12)}
-.lvl-grid button.done{border-color:rgba(110,200,255,.35);color:#9fdcef}
-.lvl-grid button:disabled{opacity:.35}
+canvas#c{display:block;position:fixed;inset:0;z-index:1;touch-action:none}
+.ov{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  padding:calc(24px + env(safe-area-inset-top,0px)) calc(22px + env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) calc(22px + env(safe-area-inset-left,0px));
+  background:radial-gradient(90% 60% at 50% 0%,rgba(255,179,65,.12),transparent 60%),rgba(5,7,11,.93);transition:opacity .4s ease}
+.ov.soft{background:rgba(5,7,11,.74);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.ov.hidden{opacity:0;pointer-events:none}
+.eyebrow{font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:var(--amber);margin:0 0 1em}
+h1{font-weight:800;letter-spacing:.16em;font-size:clamp(34px,10vw,50px);margin:0 0 .3em;color:#f6f2ea;text-shadow:0 0 30px rgba(255,179,65,.3)}
+h2{font-weight:700;letter-spacing:.1em;font-size:clamp(24px,7vw,34px);margin:0 0 .35em;color:#f6f2ea}
+.lede{max-width:24em;color:var(--dim);line-height:1.6;font-size:15px;margin:0 0 1.6em}
+.btn{font:inherit;font-weight:700;background:linear-gradient(180deg,#ffc35e,#f39a1d);color:#2a1700;border:none;padding:15px 38px;letter-spacing:.14em;
+  min-height:52px;font-size:14px;text-transform:uppercase;cursor:pointer;border-radius:16px;touch-action:manipulation;
+  box-shadow:0 6px 0 #a35f00,0 12px 30px rgba(255,160,40,.25);transition:transform .08s,box-shadow .08s}
+.btn:active{transform:translateY(4px);box-shadow:0 2px 0 #a35f00,0 6px 16px rgba(255,160,40,.2)}
+.ghost{font:inherit;background:rgba(20,26,38,.8);color:#c4ccd8;border:1px solid #2b3446;padding:11px 18px;letter-spacing:.1em;font-size:12px;
+  text-transform:uppercase;border-radius:12px;min-height:44px;cursor:pointer;touch-action:manipulation;font-weight:600}
+.ghost:active{transform:scale(.97)}
+.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:1.1em}
+.howlist{max-width:22em;text-align:left;color:#b7c0cd;font-size:14px;line-height:1.55;margin:0 0 1.4em;padding:0;list-style:none}
+.howlist li{display:flex;gap:12px;align-items:flex-start;margin:0 0 .8em}
+.howlist i{flex:0 0 26px;height:26px;border-radius:7px;display:inline-block;margin-top:1px}
+.lvl-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;width:min(300px,86vw);margin:0 auto 1.3em}
+.lvl-grid button{aspect-ratio:1;border-radius:14px;border:1px solid #2b3446;background:#111724;color:#c5cedb;font:800 16px/1 system-ui;cursor:pointer;
+  touch-action:manipulation;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.lvl-grid button small{font-size:9px;letter-spacing:.05em;color:var(--amber);font-weight:700;min-height:9px}
+.lvl-grid button.cur{border-color:var(--amber);box-shadow:0 0 18px rgba(255,179,65,.2)}
+.lvl-grid button:disabled{opacity:.3}
+#hud{position:fixed;left:0;right:0;top:0;z-index:5;display:none;pointer-events:none;align-items:center;justify-content:center;gap:8px;
+  padding:calc(10px + env(safe-area-inset-top,0px)) calc(10px + env(safe-area-inset-right,0px)) 0 calc(10px + env(safe-area-inset-left,0px))}
+body[data-mode=play] #hud{display:flex}
+.pill{pointer-events:auto;background:rgba(12,16,24,.82);border:1px solid var(--line);border-radius:999px;padding:0 13px;height:38px;font-size:13px;font-weight:700;
+  letter-spacing:.05em;color:#cdd5e1;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+body.from-arcade .pill{padding:0 10px;gap:5px}
+body.from-arcade #timer{min-width:72px}
+#timer{min-width:86px;justify-content:center;font-variant-numeric:tabular-nums;font-size:15px;color:#ffd38a;border-color:rgba(255,179,65,.35)}
+#timer.low{color:#fff;background:rgba(160,30,30,.85);border-color:#ff7b7b;animation:beat 1s infinite}
+#timer.frozen{color:#cdeeff;background:rgba(30,80,120,.85);border-color:#8fd4ff}
+@keyframes beat{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+#hudMenu{width:38px;padding:0;justify-content:center;cursor:pointer}
+#dock{position:fixed;left:0;right:0;bottom:0;z-index:5;display:none;justify-content:center;gap:10px;
+  padding:0 calc(12px + env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) calc(12px + env(safe-area-inset-left,0px))}
+body[data-mode=play] #dock{display:flex}
+.tool{position:relative;width:62px;height:58px;border-radius:16px;border:1px solid #2b3446;background:rgba(16,21,32,.9);color:#cfd7e3;
+  font:700 9px/1 system-ui;letter-spacing:.08em;text-transform:uppercase;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  cursor:pointer;touch-action:manipulation;box-shadow:0 4px 0 #0a0d14}
+.tool:active{transform:translateY(3px);box-shadow:0 1px 0 #0a0d14}
+.tool svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tool .n{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;border-radius:10px;background:var(--amber);color:#2a1700;font-size:11px;
+  display:flex;align-items:center;justify-content:center;padding:0 5px}
+.tool.used{opacity:.35}
+.tool.arm{border-color:var(--amber);color:#ffd38a;box-shadow:0 0 20px rgba(255,179,65,.35),0 4px 0 #0a0d14}
+#toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);z-index:6;max-width:min(340px,88vw);
+  background:rgba(14,18,28,.94);border:1px solid rgba(255,179,65,.4);border-radius:14px;padding:11px 15px;font-size:13px;line-height:1.45;color:#e9e1d2;
+  text-align:center;opacity:0;transition:opacity .35s,transform .35s;pointer-events:none}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+#toast b{color:var(--amber)}
+.stars{display:flex;gap:10px;justify-content:center;margin:.2em 0 .8em}
+.stars span{font-size:38px;color:#2b3446;transform:scale(.4);opacity:0;transition:transform .45s cubic-bezier(.3,1.8,.5,1),opacity .3s}
+.stars span.on{color:#ffc35e;text-shadow:0 0 20px rgba(255,179,65,.6)}
+.stars span.pop{transform:scale(1);opacity:1}
+.stat{color:var(--dim);letter-spacing:.08em;font-size:13px;margin:0 0 1.3em}
 </style>
 </head>
 <body data-mode="title">
 <canvas id="c"></canvas>
 
-<div id="title" class="overlay">
-  <div class="eyebrow">Night freight · bay 07</div>
-  <h1>BAYSHIFT</h1>
-  <p class="lede">The grid is dimming. Slide every glowing crate into its matching bay door before the night shift ends — and leave the lanes clear for the next load.</p>
-  <button class="cta" id="btnPlay" type="button">Begin shift</button>
-  <div class="row">
-    <button class="ghost" id="btnLevels" type="button">Levels</button>
-    <button class="ghost" id="btnHow" type="button">How to play</button>
-  </div>
-  <p class="hint"><b>Swipe</b> a crate · <b>Undo</b> frees a jam · clear all doors to clock out</p>
-</div>
-
-<div id="how" class="overlay hidden">
-  <div class="eyebrow">Controls</div>
-  <h1 style="letter-spacing:.12em;font-size:clamp(22px,6vw,32px)">How it plays</h1>
-  <p class="lede" style="font-style:normal;text-align:left">
-    Tap or swipe a crate to slide it in that direction. It keeps moving until it hits a wall, another crate, or a bay door.<br><br>
-    A crate that reaches a <strong style="color:var(--accent)">matching-color door</strong> ships out with a satisfying clear. Wrong-color doors block like walls.<br><br>
-    Plan the order — one blocked lane can strand the rest of the load.
-  </p>
-  <button class="cta" id="btnHowBack" type="button">Got it</button>
-</div>
-
-<div id="levels" class="overlay hidden">
-  <div class="eyebrow">Manifest</div>
-  <h1 style="letter-spacing:.12em;font-size:clamp(22px,6vw,32px)">Select bay</h1>
-  <div class="lvl-grid" id="lvlGrid"></div>
-  <button class="ghost" id="btnLvlBack" type="button">Back</button>
-</div>
-
-<div id="win" class="overlay hidden">
-  <div class="winbox">
-    <div class="eyebrow">Bay cleared</div>
-    <h1 style="letter-spacing:.12em;font-size:clamp(22px,6vw,34px)">Load shipped</h1>
-    <p class="stats" id="winStats">—</p>
-    <p class="lede" id="winLede" style="margin-bottom:1.4em">The docks go quiet for a breath.</p>
-    <button class="cta" id="btnNext" type="button">Next bay</button>
-    <div class="row">
-      <button class="ghost" id="btnReplay" type="button">Replay</button>
-      <button class="ghost" id="btnMenu" type="button">Menu</button>
-    </div>
-  </div>
-</div>
-
 <div id="hud">
-  <div class="chip" id="hudLevel"><strong id="hudLv">1</strong> / <span id="hudMax">10</span></div>
-  <div style="display:flex;gap:8px">
-    <div class="chip" id="hudMoves">Moves <strong id="hudMv">0</strong></div>
-  </div>
+  <div class="pill" id="hudLevel">BAY <span id="hudLv">1</span></div>
+  <div class="pill" id="timer">1:00</div>
+  <div class="pill" id="hudLeft">📦 <span id="hudN">0</span></div>
+  <button class="pill" id="hudMenu" type="button" aria-label="Pause">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 5v14M16 5v14"/></svg>
+  </button>
 </div>
 <div id="dock">
-  <button class="chip" id="btnUndo" type="button">Undo</button>
-  <button class="chip" id="btnReset" type="button">Reset</button>
-  <button class="chip" id="btnPause" type="button">Menu</button>
+  <button class="tool" id="tUndo" type="button" aria-label="Undo last move"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>Undo</button>
+  <button class="tool" id="tRestart" type="button" aria-label="Restart bay"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Restart</button>
+  <button class="tool" id="tCoffee" type="button" aria-label="Coffee break: freeze the clock for 10 seconds"><span class="n">1</span><svg viewBox="0 0 24 24"><path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M17 11h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 2.5c-.8 1 .8 2 0 3M12 2.5c-.8 1 .8 2 0 3"/></svg>Break</button>
+  <button class="tool" id="tLift" type="button" aria-label="Forklift: lift one crate off the dock"><span class="n">1</span><svg viewBox="0 0 24 24"><path d="M3 19V7h6l3 6v6"/><path d="M12 13h3"/><path d="M18 4v15h4"/><circle cx="6" cy="19" r="2"/><circle cx="12" cy="19" r="2"/></svg>Lift</button>
+</div>
+<div id="toast"></div>
+
+<div id="title" class="ov">
+  <div class="eyebrow">Night freight · Pier 7</div>
+  <h1>BAYSHIFT</h1>
+  <p class="lede">The night ferry leaves at the whistle. Drag every crate out through the bay door of its color — if it fits — before the clock runs dry.</p>
+  <button class="btn" id="bPlay" type="button">Clock in</button>
+  <div class="row">
+    <button class="ghost" id="bLevels" type="button">Bays</button>
+    <button class="ghost" id="bHow" type="button">How to play</button>
+  </div>
+</div>
+
+<div id="how" class="ov hidden">
+  <div class="eyebrow">Dock rules</div>
+  <h2>How it plays</h2>
+  <ul class="howlist">
+    <li><i style="background:#2fd3c0"></i><span><b>Drag</b> a crate anywhere it can slide. It moves along the deck and stops at walls, bollards and other crates.</span></li>
+    <li><i style="background:linear-gradient(90deg,#14181f 30%,#ffb341 30%,#ffb341 70%,#14181f 70%)"></i><span>Push it into a <b>bay door of its color</b>. Every row or column the crate covers must fit inside the door — wide loads need wide doors.</span></li>
+    <li><i style="background:#9fd8ff"></i><span><b>Frosted</b> crates thaw after the number of loads shown. <b>Rail</b> crates slide one way only. <b>Wrapped</b> crates shed one color per bay. <b>Shutters</b> roll up after enough loads of their color.</span></li>
+    <li><i style="background:#ff6b5e"></i><span>Beat the clock. Undo is free. One <b>Break</b> (freeze 10s) and one <b>Lift</b> (remove a crate) per bay.</span></li>
+  </ul>
+  <button class="btn" id="bHowBack" type="button">Got it</button>
+</div>
+
+<div id="levels" class="ov hidden">
+  <div class="eyebrow">Shift roster</div>
+  <h2>Pick a bay</h2>
+  <div class="lvl-grid" id="lvlGrid"></div>
+  <button class="ghost" id="bLvlBack" type="button">Back</button>
+</div>
+
+<div id="pause" class="ov soft hidden">
+  <div class="eyebrow">On break</div>
+  <h2>Paused</h2>
+  <p class="lede" id="pauseInfo">The clock is stopped.</p>
+  <button class="btn" id="bResume" type="button">Back to work</button>
+  <div class="row">
+    <button class="ghost" id="bPRestart" type="button">Restart bay</button>
+    <button class="ghost" id="bPMenu" type="button">Clock out</button>
+  </div>
+</div>
+
+<div id="win" class="ov soft hidden">
+  <div class="eyebrow" id="winEyebrow">Bay cleared</div>
+  <h2 id="winTitle">Ferry loaded</h2>
+  <div class="stars" id="stars"><span>★</span><span>★</span><span>★</span></div>
+  <p class="stat" id="winStats">—</p>
+  <button class="btn" id="bNext" type="button">Next bay</button>
+  <div class="row">
+    <button class="ghost" id="bReplay" type="button">Replay</button>
+    <button class="ghost" id="bWMenu" type="button">Bays</button>
+  </div>
+</div>
+
+<div id="fail" class="ov soft hidden">
+  <div class="eyebrow" style="color:#ff8a8a">Whistle blew</div>
+  <h2>Ferry's gone</h2>
+  <p class="lede" id="failInfo">The clock ran out with crates still on the deck.</p>
+  <button class="btn" id="bOvertime" type="button">Overtime +30s</button>
+  <div class="row">
+    <button class="ghost" id="bRetry" type="button">Retry bay</button>
+    <button class="ghost" id="bFMenu" type="button">Bays</button>
+  </div>
 </div>
 
 <script>
+/*BAYSHIFT-LOGIC-START*/
+/* Pure rules engine — shared by the game and tools/solve.js. No DOM. */
+var BS = (function () {
+  'use strict';
+  var SIDES = { R: [1, 0], L: [-1, 0], T: [0, -1], B: [0, 1] };
+  function sideOf(dx, dy) { return dx > 0 ? 'R' : dx < 0 ? 'L' : dy < 0 ? 'T' : 'B'; }
+  function parseShape(s) {
+    var out = [];
+    s.split(',').forEach(function (row, y) {
+      for (var x = 0; x < row.length; x++) if (row[x] === 'x') out.push([x, y]);
+    });
+    return out;
+  }
+  var SHAPES = {
+    '1': 'x', 'h2': 'xx', 'v2': 'x,x', 'h3': 'xxx', 'v3': 'x,x,x', 'h4': 'xxxx', 'v4': 'x,x,x,x',
+    'o': 'xx,xx', 'L': 'x.,xx', 'J': '.x,xx', 'Lr': 'xx,x.', 'Jr': 'xx,.x',
+    'L3': 'x.,x.,xx', 'J3': '.x,.x,xx', 'T': 'xxx,.x.', 'Tu': '.x.,xxx', 'Tl': 'x.,xx,x.', 'Tr': '.x,xx,.x',
+    'slab': 'xx,xx,xx', 'wide': 'xxx,xxx', 'S': '.xx,xx.', 'Z': 'xx.,.xx'
+  };
+  /* Levels are ASCII art: '.' floor, '#' bollard, ' ' outside the dock, letters = crates
+     (one letter per crate; key maps letter -> color string or {c|layers, frost, rail}). */
+  function expand(L) {
+    if (L.crates) return L;
+    var map = [], crates = [], seen = {};
+    L.grid.forEach(function (row, y) {
+      map.push(row.replace(/[a-zA-Z]/g, '.'));
+      for (var x = 0; x < row.length; x++) {
+        var ch = row[x];
+        if (!/[a-zA-Z]/.test(ch)) continue;
+        (seen[ch] = seen[ch] || []).push([x, y]);
+      }
+    });
+    Object.keys(seen).sort().forEach(function (ch) {
+      var cells = seen[ch], minx = 99, miny = 99, maxx = 0, maxy = 0;
+      cells.forEach(function (c) { minx = Math.min(minx, c[0]); miny = Math.min(miny, c[1]); maxx = Math.max(maxx, c[0]); maxy = Math.max(maxy, c[1]); });
+      var rows = [];
+      for (var yy = miny; yy <= maxy; yy++) {
+        var r = '';
+        for (var xx = minx; xx <= maxx; xx++) r += cells.some(function (c) { return c[0] === xx && c[1] === yy; }) ? 'x' : '.';
+        rows.push(r);
+      }
+      var k = L.key[ch]; if (typeof k === 'string') k = { c: k };
+      if (!k) throw new Error('no key for crate ' + ch);
+      crates.push({ s: rows.join(','), x: minx, y: miny, c: k.c, layers: k.layers, frost: k.frost, rail: k.rail, tag: ch });
+    });
+    return { name: L.name, time: L.time, tip: L.tip, map: map, doors: L.doors, crates: crates };
+  }
+  function build(L) {
+    L = expand(L);
+    var h = L.map.length, w = L.map[0].length;
+    var solid = new Uint8Array(w * h), kind = new Uint8Array(w * h);
+    for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+      var ch = L.map[y][x];
+      if (ch === '#') { solid[y * w + x] = 1; kind[y * w + x] = 1; }       // bollard
+      else if (ch === ' ') { solid[y * w + x] = 1; kind[y * w + x] = 2; }  // void (outside the dock)
+    }
+    var pieces = L.crates.map(function (c, i) {
+      var cells = parseShape(SHAPES[c.s || '1'] || c.s);
+      var bw = 0, bh = 0;
+      cells.forEach(function (p) { bw = Math.max(bw, p[0] + 1); bh = Math.max(bh, p[1] + 1); });
+      return {
+        id: i + 1, cells: cells, bw: bw, bh: bh, x: c.x, y: c.y,
+        colors: c.layers ? c.layers.slice() : [c.c], li: 0,
+        rail: c.rail || null, frost: c.frost || 0, alive: true, tag: c.tag || ''
+      };
+    });
+    var doors = L.doors.map(function (d, i) {
+      return { id: i, side: d.side, at: d.at, len: d.len || 1, c: d.c, lock: d.lock || null };
+    });
+    return { w: w, h: h, solid: solid, kind: kind, doors: doors, pieces: pieces, shipped: 0, by: {} };
+  }
+  function grid(st) {
+    var g = new Int16Array(st.w * st.h);
+    st.pieces.forEach(function (p) {
+      if (!p.alive) return;
+      p.cells.forEach(function (c) { g[(p.y + c[1]) * st.w + p.x + c[0]] = p.id; });
+    });
+    return g;
+  }
+  function fits(st, g, p, x, y) {
+    for (var i = 0; i < p.cells.length; i++) {
+      var cx = x + p.cells[i][0], cy = y + p.cells[i][1];
+      if (cx < 0 || cy < 0 || cx >= st.w || cy >= st.h) return false;
+      var k = cy * st.w + cx;
+      if (st.solid[k]) return false;
+      if (g[k] && g[k] !== p.id) return false;
+    }
+    return true;
+  }
+  function color(p) { return p.colors[p.li]; }
+  function frozen(st, p) { return p.frost > 0 && st.shipped < p.frost; }
+  function frostLeft(st, p) { return Math.max(0, p.frost - st.shipped); }
+  function doorOpen(st, d) { return !d.lock || (st.by[d.lock.c] || 0) >= d.lock.n; }
+  function lockLeft(st, d) { return d.lock ? Math.max(0, d.lock.n - (st.by[d.lock.c] || 0)) : 0; }
+  function axisOk(p, dx, dy) {
+    if (p.rail === 'h' && dy !== 0) return false;
+    if (p.rail === 'v' && dx !== 0) return false;
+    return true;
+  }
+  /* Can piece p, sitting at (x,y), slide out through a door in direction (dx,dy)?
+     Every row/column the crate occupies must lie inside the door span, the door must match
+     and be open, and the crate's trailing cells must have a clear runway to the wall. */
+  function exitDoor(st, g, p, x, y, dx, dy) {
+    if (!axisOk(p, dx, dy)) return null;
+    var side = sideOf(dx, dy), col = color(p);
+    for (var i = 0; i < st.doors.length; i++) {
+      var d = st.doors[i];
+      if (d.side !== side || d.c !== col || !doorOpen(st, d)) continue;
+      var ok = true, j, c;
+      for (j = 0; j < p.cells.length && ok; j++) {
+        c = p.cells[j];
+        var along = (side === 'L' || side === 'R') ? y + c[1] : x + c[0];
+        if (along < d.at || along >= d.at + d.len) ok = false;
+      }
+      if (!ok) continue;
+      var ext = (dx !== 0 ? p.bw : p.bh) + Math.max(st.w, st.h);
+      for (var k = 1; k <= ext && ok; k++) {
+        var any = false;
+        for (j = 0; j < p.cells.length; j++) {
+          c = p.cells[j];
+          var cx = x + c[0] + dx * k, cy = y + c[1] + dy * k;
+          if (cx < 0 || cy < 0 || cx >= st.w || cy >= st.h) continue;
+          any = true;
+          var kk = cy * st.w + cx;
+          if (st.solid[kk] || (g[kk] && g[kk] !== p.id)) { ok = false; break; }
+        }
+        if (!any) break;
+      }
+      if (ok) return d;
+    }
+    return null;
+  }
+  /* Ship: wrapped crates peel one layer and stay; otherwise the crate leaves the dock. */
+  function ship(st, p) {
+    var col = color(p);
+    st.shipped++;
+    st.by[col] = (st.by[col] || 0) + 1;
+    if (p.li < p.colors.length - 1) { p.li++; return 'peel'; }
+    p.alive = false;
+    return 'gone';
+  }
+  function remaining(st) { var n = 0; st.pieces.forEach(function (p) { if (p.alive) n++; }); return n; }
+  function snapshot(st) {
+    return { shipped: st.shipped, by: JSON.parse(JSON.stringify(st.by)),
+      p: st.pieces.map(function (p) { return [p.x, p.y, p.li, p.alive ? 1 : 0]; }) };
+  }
+  function restore(st, s) {
+    st.shipped = s.shipped; st.by = JSON.parse(JSON.stringify(s.by));
+    s.p.forEach(function (a, i) { var p = st.pieces[i]; p.x = a[0]; p.y = a[1]; p.li = a[2]; p.alive = !!a[3]; });
+  }
+  /* All cells a crate can be dragged to (grid flood fill of translations). */
+  function reach(st, g, p) {
+    var seen = {}, out = [], q = [[p.x, p.y]];
+    seen[p.x + ',' + p.y] = 1;
+    while (q.length) {
+      var cur = q.shift(); out.push(cur);
+      var dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+      for (var i = 0; i < 4; i++) {
+        var dx = dirs[i][0], dy = dirs[i][1];
+        if (!axisOk(p, dx, dy)) continue;
+        var nx = cur[0] + dx, ny = cur[1] + dy, k = nx + ',' + ny;
+        if (seen[k]) continue;
+        if (!fits(st, g, p, nx, ny)) continue;
+        seen[k] = 1; q.push([nx, ny]);
+      }
+    }
+    return out;
+  }
+  return { expand: expand, SHAPES: SHAPES, SIDES: SIDES, sideOf: sideOf, parseShape: parseShape, build: build, grid: grid, fits: fits,
+    color: color, frozen: frozen, frostLeft: frostLeft, doorOpen: doorOpen, lockLeft: lockLeft, axisOk: axisOk,
+    exitDoor: exitDoor, ship: ship, remaining: remaining, snapshot: snapshot, restore: restore, reach: reach };
+})();
+if (typeof module !== 'undefined') module.exports = BS;
+/*BAYSHIFT-LOGIC-END*/
+
+</script>
+<script>
+/*BAYSHIFT-LEVELS-START*/
+/* key colors: coral teal amber violet lime sky rose. Doors: side T/B (at = column) or L/R (at = row), len = width in cells. */
+var LEVELS = [
+{ name:'Intake', time:60, tip:'Drag a crate into the bay door of its color.',
+  grid:['....','.aa.','....','b...','....'], key:{a:'coral',b:'teal'},
+  doors:[{side:'T',at:1,len:2,c:'coral'},{side:'R',at:3,c:'teal'}] },
+{ name:'Twin berth', time:60, tip:'A crate only fits through a door at least as wide as it is.',
+  grid:['.....','a....','a.c..','.....','..bb.'], key:{a:'amber',b:'teal',c:'violet'},
+  doors:[{side:'L',at:1,len:2,c:'amber'},{side:'B',at:2,len:2,c:'teal'},{side:'T',at:4,c:'violet'}] },
+{ name:'Wide load', time:70, tip:'Long loads need a clear runway — and a wide door.',
+  grid:['.....','.b...','.b.c.','.....','.aaa.','.....'], key:{a:'coral',b:'teal',c:'amber'},
+  doors:[{side:'T',at:1,len:3,c:'coral'},{side:'B',at:2,c:'coral'},{side:'L',at:1,len:2,c:'teal'},{side:'R',at:2,c:'amber'}] },
+{ name:'Park it', time:60, tip:'Sometimes a crate has to step aside first.',
+  grid:['##.##','##.##','.b.a.','##.##','##c##'], key:{a:'coral',b:'teal',c:'amber'},
+  doors:[{side:'L',at:2,c:'coral'},{side:'R',at:2,c:'teal'},{side:'B',at:2,c:'amber'}] },
+{ name:'Packed', time:80, tip:'Odd-shaped loads: find the free ones first.',
+  grid:['aabbc.','a.dbcc','eedd..','f.gggh','f..g.h','iii..h'],
+  key:{a:'coral',b:'teal',c:'amber',d:'teal',e:'lime',f:'sky',g:'amber',h:'coral',i:'rose'},
+  doors:[{side:'T',at:0,len:2,c:'coral'},{side:'T',at:2,len:2,c:'teal'},{side:'T',at:5,c:'coral'},{side:'R',at:0,len:2,c:'amber'},{side:'R',at:3,len:2,c:'amber'},
+         {side:'L',at:2,c:'lime'},{side:'B',at:0,c:'sky'},{side:'B',at:1,len:3,c:'rose'}] },
+{ name:'Bollards', time:80, tip:'Steel bollards never move. Two crates in each other\u2019s way? Park one.',
+  grid:['#a..b#','.a..b.','cc..dd','......','.eeff.','#....#'],
+  key:{a:'coral',b:'teal',c:'amber',d:'violet',e:'lime',f:'sky'},
+  doors:[{side:'B',at:1,c:'coral'},{side:'B',at:4,c:'teal'},{side:'R',at:2,c:'amber'},{side:'L',at:2,c:'violet'},{side:'T',at:1,len:2,c:'lime'},{side:'T',at:3,len:2,c:'sky'}] },
+{ name:'Cold storage', time:75, tip:'Frosted crates thaw after the number of loads shown.',
+  grid:['.....','.aa..','.aa.d','.bc.d','.....','e....'],
+  key:{a:{c:'teal',frost:3},b:'coral',c:'amber',d:'lime',e:'sky'},
+  doors:[{side:'T',at:1,len:2,c:'teal'},{side:'B',at:1,c:'coral'},{side:'B',at:2,c:'amber'},{side:'R',at:2,len:2,c:'lime'},{side:'R',at:5,c:'sky'}] },
+{ name:'Night rush', time:100, tip:'Two crates, one lane, opposite doors. Make room.',
+  grid:['#ab.c#','.ab.c.','dd..ee','f.##.g','f.hh.g','iijjkk','#....#'],
+  key:{a:'coral',b:'teal',c:'lime',d:'amber',e:'violet',f:'sky',g:'rose',h:'coral',i:'teal',j:'sky',k:'lime'},
+  doors:[{side:'T',at:1,c:'coral'},{side:'T',at:2,c:'teal'},{side:'T',at:4,c:'lime'},{side:'R',at:2,c:'amber'},{side:'L',at:2,c:'violet'},
+         {side:'L',at:3,len:2,c:'sky'},{side:'R',at:3,len:2,c:'rose'},{side:'B',at:2,len:2,c:'coral'},{side:'L',at:5,c:'teal'},{side:'R',at:5,c:'lime'}] },
+{ name:'On rails', time:80, tip:'Railed crates only slide along their tracks.',
+  grid:['a.bb.','a.cc.','eeef.','...f.','gg.hh','...i.'],
+  key:{a:'coral',b:'teal',c:'amber',e:{c:'lime',rail:'h'},f:{c:'violet',rail:'v'},g:'rose',h:'sky',i:'coral'},
+  doors:[{side:'L',at:0,len:2,c:'coral'},{side:'T',at:2,len:2,c:'teal'},{side:'R',at:1,c:'amber'},{side:'R',at:2,c:'lime'},{side:'B',at:3,c:'violet'},
+         {side:'R',at:4,c:'sky'},{side:'L',at:4,c:'rose'},{side:'L',at:5,c:'coral'}] },
+{ name:'Switchyard', time:110,
+  grid:['aa.bbb','c..d..','c.ed..','ffe.gg','.hhh.j','.i...j','.i.kk.'],
+  key:{a:{c:'coral',rail:'h'},b:'teal',c:{c:'amber',rail:'v'},d:'violet',e:{c:'lime',rail:'v'},f:'sky',g:'rose',h:{c:'coral',rail:'h'},i:'teal',j:'amber',k:'violet'},
+  doors:[{side:'T',at:3,len:3,c:'teal'},{side:'R',at:0,c:'coral'},{side:'T',at:0,c:'amber'},{side:'B',at:3,len:2,c:'violet'},{side:'B',at:2,c:'lime'},
+         {side:'L',at:3,c:'sky'},{side:'R',at:3,c:'rose'},{side:'R',at:4,c:'coral'},{side:'B',at:1,c:'teal'},{side:'B',at:5,c:'amber'}] },
+{ name:'Shrink-wrap', time:75, tip:'Wrapped crates shed one layer per bay. Outer color first.',
+  grid:['.....','..b..','.aa..','.aa..','.cc..','.....'],
+  key:{a:{layers:['coral','teal']},b:'amber',c:'lime'},
+  doors:[{side:'T',at:1,len:2,c:'coral'},{side:'R',at:1,c:'amber'},{side:'B',at:1,len:2,c:'teal'},{side:'L',at:4,c:'lime'}] },
+{ name:'Double wrap', time:100,
+  grid:['aa.bb.','aa.bb.','c....d','c....d','.eeff.','.eeff.','g....h'],
+  key:{a:{layers:['violet','teal']},b:{layers:['teal','violet']},c:'coral',d:'amber',e:'lime',f:'sky',g:'rose',h:'rose'},
+  doors:[{side:'T',at:0,len:2,c:'violet'},{side:'T',at:3,len:2,c:'teal'},{side:'L',at:2,len:2,c:'coral'},{side:'R',at:2,len:2,c:'amber'},
+         {side:'B',at:1,len:2,c:'lime'},{side:'B',at:3,len:2,c:'sky'},{side:'L',at:6,c:'rose'},{side:'R',at:6,c:'rose'}] },
+{ name:'Roller shutter', time:80, tip:'Shutters roll up once enough crates of their color ship.',
+  grid:['.....','.....','aab..','..c..','.dc..','.d...'],
+  key:{a:'teal',b:'coral',c:'coral',d:'amber'},
+  doors:[{side:'R',at:2,c:'teal',lock:{c:'coral',n:2}},{side:'T',at:2,c:'coral'},{side:'B',at:1,c:'amber'}] },
+{ name:'The slab', time:120, tip:'The big load thaws last. Lift the lid out of its chute first.',
+  grid:['ab..cd','ab..cd','eeffgg','......','j#hh#k','j#AA#k','l#AA#m','l#AA#m'],
+  key:{a:'coral',b:'teal',c:'violet',d:'lime',e:'sky',f:'rose',g:'rose',h:'teal',j:'violet',k:'lime',l:'sky',m:'rose',A:{c:'amber',frost:8}},
+  doors:[{side:'T',at:0,c:'coral'},{side:'T',at:1,c:'teal'},{side:'T',at:2,len:2,c:'amber'},{side:'T',at:4,c:'violet'},{side:'T',at:5,c:'lime'},
+         {side:'L',at:2,c:'sky'},{side:'L',at:4,len:2,c:'violet'},{side:'L',at:6,len:2,c:'sky'},
+         {side:'R',at:2,c:'rose'},{side:'R',at:4,len:2,c:'lime'},{side:'R',at:6,len:2,c:'rose'},{side:'B',at:2,len:2,c:'teal'}] },
+{ name:'Cross dock', time:120,
+  grid:['  ...  ','  .a.  ','.b.a.c.','.b.e.c.','.......','  .d.  ','  .d.  '],
+  key:{a:'coral',b:'amber',c:'violet',d:'teal',e:{c:'lime',frost:4}},
+  doors:[{side:'T',at:3,c:'teal'},{side:'B',at:3,c:'coral'},{side:'L',at:2,len:2,c:'violet'},{side:'R',at:2,len:2,c:'amber'},{side:'L',at:4,c:'lime'}] },
+{ name:'Deep freeze', time:130,
+  grid:['aabbcc','d.ee.f','d.ee.f','gg..hh','.iiii.','j.kk.l','j.kk.l','mm..nn'],
+  key:{a:'coral',b:'teal',c:'amber',d:'violet',e:{c:'lime',frost:4},f:'sky',g:'rose',h:'coral',i:'amber',j:'teal',k:{c:'violet',frost:2},l:'lime',m:'sky',n:'rose'},
+  doors:[{side:'T',at:0,len:2,c:'coral'},{side:'T',at:2,len:2,c:'teal'},{side:'T',at:4,len:2,c:'amber'},
+         {side:'L',at:1,len:2,c:'violet'},{side:'L',at:3,c:'rose'},{side:'L',at:4,c:'amber',lock:{c:'violet',n:2}},{side:'L',at:5,len:2,c:'teal'},
+         {side:'R',at:1,len:2,c:'sky'},{side:'R',at:3,c:'coral'},{side:'R',at:5,len:2,c:'lime'},
+         {side:'B',at:0,len:2,c:'sky'},{side:'B',at:2,len:2,c:'violet'},{side:'B',at:4,len:2,c:'rose'}] },
+{ name:'Graveyard shift', time:130,
+  grid:['.aabb.','.a..b.','ccddee','..dd..','f.gg.h','f.gg.h','iijjkk','......'],
+  key:{a:'coral',b:'teal',c:'amber',d:{layers:['coral','teal']},e:'rose',f:{c:'sky',rail:'v'},g:'violet',h:{c:'coral',rail:'v'},i:'sky',j:'lime',k:'violet'},
+  doors:[{side:'T',at:0,c:'sky'},{side:'T',at:1,len:2,c:'coral'},{side:'T',at:3,len:2,c:'teal'},{side:'T',at:5,c:'coral'},
+         {side:'R',at:2,c:'amber'},{side:'L',at:6,c:'lime'},{side:'L',at:2,c:'rose'},
+         {side:'B',at:0,len:2,c:'sky'},{side:'B',at:2,len:2,c:'violet',lock:{c:'coral',n:3}}] },
+{ name:'Last whistle', time:150,
+  grid:['.aabb.','c.dd.e','c.dd.e','ff..gg','.hhii.','j.kk.l','j.kk.l','.mmnn.'],
+  key:{a:'coral',b:'teal',c:'amber',d:{layers:['teal','coral']},e:'violet',f:'rose',g:'rose',h:{c:'rose',rail:'h'},i:{c:'amber',rail:'h'},
+       j:'coral',k:{c:'violet',frost:5},l:'teal',m:'lime',n:'sky'},
+  doors:[{side:'T',at:1,len:2,c:'coral'},{side:'T',at:3,len:2,c:'teal'},
+         {side:'L',at:1,len:2,c:'amber'},{side:'L',at:3,len:2,c:'rose'},{side:'L',at:5,len:2,c:'violet',lock:{c:'coral',n:3}},
+         {side:'R',at:1,len:2,c:'violet'},{side:'R',at:3,c:'rose'},{side:'R',at:4,c:'amber'},{side:'R',at:5,len:2,c:'teal'},
+         {side:'B',at:0,c:'coral'},{side:'B',at:1,len:2,c:'sky'},{side:'B',at:3,len:2,c:'lime'}] }
+];
+/*BAYSHIFT-LEVELS-END*/
+
+</script>
+<script>
 (function () {
 'use strict';
-
-const COLORS = {
-  coral: { fill:'#ff6b6b', glow:'rgba(255,107,107,.55)', door:'#ff8a8a', name:'coral' },
-  teal:  { fill:'#3ecfc4', glow:'rgba(62,207,196,.5)',  door:'#6ee7de', name:'teal' },
-  violet:{ fill:'#a78bfa', glow:'rgba(167,139,250,.55)', door:'#c4b5fd', name:'violet' },
-  amber: { fill:'#ffb454', glow:'rgba(255,180,84,.55)',  door:'#ffd08a', name:'amber' },
-  rose:  { fill:'#fb7185', glow:'rgba(251,113,133,.5)',  door:'#fda4af', name:'rose' },
-  lime:  { fill:'#a3e635', glow:'rgba(163,230,53,.45)',  door:'#bef264', name:'lime' },
+/* ---------- palette (each color also carries a stencil glyph for colorblind play) ---------- */
+var PAL = {
+  coral: { f:'#ff6b5e', d:'#c63d33', l:'#ffa59c', g:'circle' },
+  teal:  { f:'#2fd3c0', d:'#14907f', l:'#8af0e3', g:'tri' },
+  amber: { f:'#ffb341', d:'#c97a0e', l:'#ffd796', g:'square' },
+  violet:{ f:'#a68bff', d:'#6b4fd1', l:'#d2c6ff', g:'diamond' },
+  lime:  { f:'#9be15d', d:'#5f9e26', l:'#cdf5a8', g:'plus' },
+  sky:   { f:'#4fb3ff', d:'#1f73c4', l:'#a8daff', g:'ring' },
+  rose:  { f:'#ff6fae', d:'#c43a78', l:'#ffb3d4', g:'cross' }
 };
-
-/* Handcrafted bays — w/h cells; doors on edge cells; crates 1×1; walls solid */
-const LEVELS = [
-  { // 1 — tutorial straight shot
-    name:'Intake',
-    w:5,h:5,
-    walls:[[1,1],[3,3]],
-    doors:[{x:4,y:2,c:'teal'}],
-    crates:[{x:0,y:2,c:'teal'}]
-  },
-  { // 2 — two parallel lanes
-    name:'Twin berth',
-    w:5,h:5,
-    walls:[[2,2]],
-    doors:[{x:4,y:1,c:'coral'},{x:4,y:3,c:'teal'}],
-    crates:[{x:0,y:1,c:'coral'},{x:0,y:3,c:'teal'}]
-  },
-  { // 3 — cross traffic (order free)
-    name:'Cross dock',
-    w:5,h:5,
-    walls:[[0,0],[4,4]],
-    doors:[{x:4,y:2,c:'violet'},{x:2,y:0,c:'amber'}],
-    crates:[{x:0,y:2,c:'violet'},{x:2,y:4,c:'amber'}]
-  },
-  { // 4 — park one aside
-    name:'Narrow lane',
-    w:5,h:6,
-    walls:[[1,1],[1,2],[3,1],[3,2],[1,4],[3,4]],
-    doors:[{x:2,y:0,c:'coral'},{x:4,y:5,c:'teal'}],
-    crates:[{x:2,y:5,c:'coral'},{x:0,y:3,c:'teal'},{x:2,y:3,c:'teal'}]
-  },
-  { // 5 — three colors
-    name:'Tri-load',
-    w:6,h:6,
-    walls:[[2,2],[3,3]],
-    doors:[{x:5,y:1,c:'coral'},{x:5,y:4,c:'teal'},{x:0,y:3,c:'violet'}],
-    crates:[{x:1,y:1,c:'coral'},{x:2,y:4,c:'teal'},{x:4,y:3,c:'violet'}]
-  },
-  { // 6 — clear amber first or jam
-    name:'Stack jam',
-    w:5,h:6,
-    walls:[[2,2],[0,3],[4,3]],
-    doors:[{x:4,y:0,c:'amber'},{x:0,y:5,c:'rose'},{x:4,y:5,c:'lime'}],
-    crates:[{x:1,y:0,c:'amber'},{x:3,y:1,c:'lime'},{x:2,y:4,c:'rose'},{x:1,y:5,c:'lime'}]
-  },
-  { // 7 — corridor weave
-    name:'Cold corridor',
-    w:6,h:5,
-    walls:[[1,1],[4,3]],
-    doors:[{x:0,y:2,c:'teal'},{x:5,y:2,c:'coral'},{x:3,y:0,c:'violet'}],
-    crates:[{x:5,y:0,c:'teal'},{x:0,y:4,c:'coral'},{x:3,y:4,c:'violet'}]
-  },
-  { // 8 — tight but open lanes
-    name:'Pressure seal',
-    w:6,h:6,
-    walls:[[1,1],[4,4],[2,3]],
-    doors:[{x:0,y:2,c:'amber'},{x:5,y:1,c:'teal'},{x:3,y:0,c:'coral'},{x:2,y:5,c:'violet'}],
-    crates:[{x:2,y:2,c:'amber'},{x:3,y:3,c:'teal'},{x:5,y:5,c:'coral'},{x:0,y:5,c:'violet'}]
-  },
-  { // 9 — denser but routed
-    name:'Rush hour',
-    w:6,h:7,
-    walls:[[1,3],[4,2],[2,5]],
-    doors:[{x:0,y:1,c:'coral'},{x:5,y:4,c:'teal'},{x:0,y:6,c:'violet'},{x:5,y:6,c:'amber'},{x:3,y:0,c:'lime'}],
-    crates:[{x:2,y:1,c:'coral'},{x:4,y:4,c:'teal'},{x:1,y:6,c:'violet'},{x:3,y:5,c:'amber'},{x:5,y:0,c:'lime'}]
-  },
-  { // 10 — finale
-    name:'Last whistle',
-    w:7,h:7,
-    walls:[[1,1],[5,5],[3,2],[2,4],[4,4]],
-    doors:[{x:0,y:3,c:'coral'},{x:6,y:3,c:'teal'},{x:3,y:0,c:'violet'},{x:3,y:6,c:'amber'},{x:0,y:0,c:'rose'},{x:6,y:6,c:'lime'}],
-    crates:[{x:2,y:3,c:'coral'},{x:4,y:3,c:'teal'},{x:3,y:1,c:'violet'},{x:3,y:5,c:'amber'},{x:1,y:0,c:'rose'},{x:5,y:6,c:'lime'}]
-  }
-];
-
-const SAVE_KEY = 'bayshift-v1';
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
-const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-
-let W = 0, H = 0;
-let mode = 'title'; // title | play | win | levels | how
-let levelIndex = 0;
-let state = null; // {w,h,walls:Set,doors:Map,crates:[],moves,undo[]}
-let anim = []; // flying exits, slides
-let particles = [];
-let selected = -1;
-let t0 = performance.now();
-let pulse = 0;
-let bgStars = [];
-let save = loadSave();
-
-const UI = {
-  title: document.getElementById('title'),
-  how: document.getElementById('how'),
-  levels: document.getElementById('levels'),
-  win: document.getElementById('win'),
-  hudLv: document.getElementById('hudLv'),
-  hudMax: document.getElementById('hudMax'),
-  hudMv: document.getElementById('hudMv'),
-  winStats: document.getElementById('winStats'),
-  winLede: document.getElementById('winLede'),
-  lvlGrid: document.getElementById('lvlGrid'),
-  btnNext: document.getElementById('btnNext'),
+var SAVE_KEY = 'bayshift-v2';
+var cv = document.getElementById('c'), ctx = cv.getContext('2d');
+var DPR = Math.min(window.devicePixelRatio || 1, 2.5);
+var W = 0, H = 0, G = null; // geometry
+var $ = function (id) { return document.getElementById(id); };
+var UI = {
+  title:$('title'), how:$('how'), levels:$('levels'), pause:$('pause'), win:$('win'), fail:$('fail'),
+  hudLv:$('hudLv'), timer:$('timer'), hudN:$('hudN'), toast:$('toast'), lvlGrid:$('lvlGrid'),
+  tCoffee:$('tCoffee'), tLift:$('tLift'), stars:$('stars'), winStats:$('winStats'), winTitle:$('winTitle'), bNext:$('bNext'),
+  bOvertime:$('bOvertime'), failInfo:$('failInfo'), pauseInfo:$('pauseInfo')
 };
+var save = loadSave();
+var mode = 'title';
+var LV = 0, L = null, st = null;
+var timeLeft = 0, timeMax = 0, started = false, freezeT = 0, overtimeUsed = false, coffee = 1, lift = 1, liftArmed = false;
+var moves = 0, undoStack = [], drag = null, anims = [], parts = [], floaters = [], shake = 0, pulse = 0;
+var doorFx = {}, combo = 0, comboT = 0, lastTick = -1, bumpCool = 0, winPending = 0, confetti = [];
+var lastT = performance.now();
 
 function loadSave() {
-  try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return { cleared: 0, best: {} };
-    const o = JSON.parse(raw);
-    return { cleared: o.cleared|0, best: o.best || {} };
-  } catch (e) { return { cleared: 0, best: {} }; }
+  try { var o = JSON.parse(localStorage.getItem(SAVE_KEY) || '{}'); return { unlocked: o.unlocked || 1, stars: o.stars || {}, sound: o.sound !== false }; }
+  catch (e) { return { unlocked: 1, stars: {}, sound: true }; }
 }
-function writeSave() {
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
-}
+function writeSave() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
 
-/* ——— audio ——— */
-let AC = null;
-function ensureAudio() {
-  if (!AC) {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (Ctx) AC = new Ctx();
-  }
-  if (AC && AC.state === 'suspended') AC.resume();
+/* ---------- audio: tiny synth, no assets ---------- */
+var AC = null, master = null;
+function audio() {
+  if (!AC) { var C = window.AudioContext || window.webkitAudioContext; if (!C) return null; AC = new C(); master = AC.createGain(); master.gain.value = .55; master.connect(AC.destination); }
+  if (AC.state === 'suspended') AC.resume();
+  return AC;
 }
-function tone(freq, dur, type, gain, delay) {
-  if (!AC) return;
-  const t = AC.currentTime + (delay || 0);
-  const o = AC.createOscillator();
-  const g = AC.createGain();
-  o.type = type || 'sine';
-  o.frequency.setValueAtTime(freq, t);
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(gain || 0.04, t + 0.015);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(g); g.connect(AC.destination);
-  o.start(t); o.stop(t + dur + 0.02);
+function tone(f, dur, type, vol, delay, slideTo) {
+  if (!AC) return; var t = AC.currentTime + (delay || 0), o = AC.createOscillator(), g = AC.createGain();
+  o.type = type || 'sine'; o.frequency.setValueAtTime(f, t); if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol || .05, t + .012); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + .03);
 }
-function sfx(kind) {
-  ensureAudio();
-  if (!AC) return;
-  if (kind === 'slide') { tone(180, 0.08, 'triangle', 0.025); tone(90, 0.1, 'sine', 0.02); }
-  else if (kind === 'ship') { tone(420, 0.12, 'sine', 0.05); tone(630, 0.18, 'triangle', 0.035, 0.04); tone(840, 0.22, 'sine', 0.025, 0.08); }
-  else if (kind === 'win') { tone(392, 0.15, 'sine', 0.05); tone(523, 0.2, 'sine', 0.045, 0.1); tone(659, 0.28, 'triangle', 0.04, 0.2); }
-  else if (kind === 'tap') { tone(240, 0.05, 'square', 0.015); }
-  else if (kind === 'undo') { tone(160, 0.07, 'triangle', 0.02); tone(120, 0.09, 'sine', 0.015, 0.03); }
-  else if (kind === 'block') { tone(70, 0.07, 'sawtooth', 0.012); }
+function noise(dur, vol, hp, delay) {
+  if (!AC) return; var t = AC.currentTime + (delay || 0), n = Math.floor(AC.sampleRate * dur), b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0);
+  for (var i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+  var s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain();
+  s.buffer = b; f.type = 'highpass'; f.frequency.value = hp || 800; g.gain.value = vol || .05;
+  s.connect(f); f.connect(g); g.connect(master); s.start(t);
 }
+var SFX = {
+  pick: function () { tone(520, .05, 'triangle', .035); },
+  step: function (k) { tone(180 + (k % 4) * 22, .035, 'square', .012); },
+  drop: function () { tone(140, .07, 'triangle', .04); noise(.04, .02, 2000); },
+  bump: function () { tone(85, .09, 'sine', .07, 0, 60); },
+  ship: function (c) { var b = 392 * Math.pow(1.122, Math.min(c, 8)); noise(.22, .05, 1200); tone(b, .12, 'sine', .06, .03); tone(b * 1.5, .18, 'triangle', .04, .08); },
+  peel: function () { noise(.18, .07, 3000); tone(700, .1, 'sawtooth', .02, 0, 300); },
+  thaw: function () { for (var i = 0; i < 5; i++) tone(1400 + i * 260, .12, 'sine', .02, i * .04); },
+  shutter: function () { for (var i = 0; i < 7; i++) noise(.03, .04, 1500, i * .035); tone(330, .2, 'triangle', .03, .25); },
+  win: function () { [523, 659, 784, 1046].forEach(function (f, i) { tone(f, .3, 'triangle', .06, i * .1); }); tone(1568, .5, 'sine', .03, .45); },
+  fail: function () { tone(330, .3, 'sawtooth', .04, 0, 160); tone(220, .5, 'sawtooth', .04, .25, 110); },
+  tick: function () { tone(1200, .03, 'square', .025); },
+  coffee: function () { noise(.5, .03, 400); tone(600, .25, 'sine', .03, 0, 900); },
+  lift: function () { tone(220, .3, 'sawtooth', .025, 0, 440); noise(.3, .03, 600); },
+  tap: function () { tone(440, .04, 'triangle', .03); }
+};
+function buzz(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
 
-/* ——— layout math ——— */
+/* ---------- geometry ---------- */
+function resize() {
+  W = innerWidth; H = innerHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  layout();
+}
 function layout() {
-  W = window.innerWidth; H = window.innerHeight;
-  canvas.width = Math.floor(W * dpr);
-  canvas.height = Math.floor(H * dpr);
-  canvas.style.width = W + 'px';
-  canvas.style.height = H + 'px';
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  if (!bgStars.length) {
-    for (let i = 0; i < 48; i++) {
-      bgStars.push({
-        x: Math.random(), y: Math.random(),
-        r: 0.4 + Math.random() * 1.4,
-        a: 0.15 + Math.random() * 0.45
-      });
-    }
-  }
+  if (!st) return;
+  var top = 64, bot = 88, F = 16; // frame thickness
+  var aw = W - 24 - 2 * F, ah = H - top - bot - 2 * F - 26;
+  var cs = Math.floor(Math.min(aw / st.w, ah / st.h, 68));
+  var bw = cs * st.w, bh = cs * st.h;
+  G = { cs: cs, F: F, bw: bw, bh: bh, ox: Math.round((W - bw) / 2), oy: Math.round(top + 26 + F + (ah - bh) / 2) };
 }
+function cellXY(x, y) { return [G.ox + x * G.cs, G.oy + y * G.cs]; }
 
-function boardGeom() {
-  if (!state) return null;
-  const safeT = 70, safeB = 78, pad = 16;
-  const availW = W - pad * 2;
-  const availH = H - safeT - safeB;
-  const cell = Math.min(Math.floor(availW / state.w), Math.floor(availH / state.h), 72);
-  const bw = cell * state.w, bh = cell * state.h;
-  const ox = Math.floor((W - bw) / 2);
-  const oy = Math.floor(safeT + (availH - bh) / 2);
-  return { cell, ox, oy, bw, bh };
-}
-
-function wallKey(x, y) { return x + ',' + y; }
-function doorKey(x, y) { return x + ',' + y; }
-
-function cloneCrates(crates) {
-  return crates.map(c => ({ x: c.x, y: c.y, c: c.c, id: c.id }));
-}
-
+/* ---------- level flow ---------- */
 function startLevel(i) {
-  levelIndex = Math.max(0, Math.min(LEVELS.length - 1, i));
-  const L = LEVELS[levelIndex];
-  const walls = new Set(L.walls.map(([x, y]) => wallKey(x, y)));
-  const doors = new Map();
-  L.doors.forEach(d => doors.set(doorKey(d.x, d.y), d.c));
-  let id = 1;
-  state = {
-    w: L.w, h: L.h, name: L.name,
-    walls, doors,
-    crates: L.crates.map(c => ({ x: c.x, y: c.y, c: c.c, id: id++ })),
-    moves: 0,
-    undo: [],
-    started: performance.now()
-  };
-  selected = state.crates.length ? 0 : -1;
-  anim = [];
-  particles = [];
-  UI.hudLv.textContent = String(levelIndex + 1);
-  UI.hudMax.textContent = String(LEVELS.length);
-  UI.hudMv.textContent = '0';
-  setMode('play');
+  LV = Math.max(0, Math.min(LEVELS.length - 1, i));
+  L = LEVELS[LV]; st = BS.build(L);
+  timeMax = timeLeft = L.time; started = false; freezeT = 0; overtimeUsed = false; coffee = 1; lift = 1; liftArmed = false;
+  moves = 0; undoStack = []; drag = null; anims = []; parts = []; floaters = []; confetti = []; doorFx = {}; combo = 0; winPending = 0; lastTick = -1;
+  st.pieces.forEach(function (p) { p.vx = p.x; p.vy = p.y; p.thawT = 0; p.wasFrozen = BS.frozen(st, p); p.pop = 0; });
+  st.doors.forEach(function (d) { d.openT = BS.doorOpen(st, d) ? 1 : 0; d.wasOpen = BS.doorOpen(st, d); });
+  layout(); syncHud(); setMode('play');
+  if (L.tip) toast('<b>Bay ' + (LV + 1) + ' · ' + L.name + '</b><br>' + L.tip, 4200); else toast('<b>Bay ' + (LV + 1) + ' · ' + L.name + '</b>', 1800);
 }
-
 function setMode(m) {
-  mode = m;
-  document.body.dataset.mode = m === 'play' ? 'play' : 'menu';
-  UI.title.classList.toggle('hidden', m !== 'title');
-  UI.how.classList.toggle('hidden', m !== 'how');
-  UI.levels.classList.toggle('hidden', m !== 'levels');
-  UI.win.classList.toggle('hidden', m !== 'win');
-  if (m === 'levels') renderLevelGrid();
+  mode = m; document.body.dataset.mode = (m === 'play' || m === 'pause' || m === 'win' || m === 'fail') ? 'play' : 'menu';
+  ['title', 'how', 'levels', 'pause', 'win', 'fail'].forEach(function (k) { UI[k].classList.toggle('hidden', m !== k); });
+  if (m === 'levels') renderLevels();
 }
-
-function renderLevelGrid() {
+function renderLevels() {
   UI.lvlGrid.innerHTML = '';
-  LEVELS.forEach((L, i) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.textContent = String(i + 1);
-    if (i < save.cleared) b.classList.add('done');
-    if (i === levelIndex) b.classList.add('on');
-    b.disabled = i > save.cleared;
-    b.addEventListener('click', () => { sfx('tap'); startLevel(i); });
+  LEVELS.forEach(function (lv, i) {
+    var b = document.createElement('button'); b.type = 'button';
+    var s = save.stars[i] || 0;
+    b.innerHTML = (i + 1) + '<small>' + (s ? '★★★'.slice(0, s) : '') + '</small>';
+    b.disabled = i + 1 > save.unlocked; if (i === Math.min(save.unlocked, LEVELS.length) - 1) b.classList.add('cur');
+    b.setAttribute('aria-label', 'Bay ' + (i + 1) + ' ' + lv.name);
+    b.onclick = function () { audio(); SFX.tap(); startLevel(i); };
     UI.lvlGrid.appendChild(b);
   });
 }
-
-function occupied(x, y, ignoreId) {
-  if (x < 0 || y < 0 || x >= state.w || y >= state.h) return 'edge';
-  if (state.walls.has(wallKey(x, y))) return 'wall';
-  const door = state.doors.get(doorKey(x, y));
-  for (const c of state.crates) {
-    if (c.id === ignoreId) continue;
-    if (c.x === x && c.y === y) return 'crate';
-  }
-  if (door) return 'door:' + door;
-  return null;
+var toastTimer = 0;
+function toast(html, ms) { UI.toast.innerHTML = html; UI.toast.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(function () { UI.toast.classList.remove('on'); }, ms || 2500); }
+function fmt(t) { t = Math.max(0, Math.ceil(t)); return Math.floor(t / 60) + ':' + ('0' + (t % 60)).slice(-2); }
+function syncHud() {
+  UI.hudLv.textContent = (LV + 1) + '/' + LEVELS.length;
+  UI.timer.textContent = started || timeLeft < timeMax ? fmt(timeLeft) : fmt(timeMax);
+  UI.timer.classList.toggle('low', timeLeft <= 10 && started && freezeT <= 0);
+  UI.timer.classList.toggle('frozen', freezeT > 0);
+  UI.hudN.textContent = BS.remaining(st);
+  UI.tCoffee.querySelector('.n').textContent = coffee; UI.tCoffee.classList.toggle('used', !coffee);
+  UI.tLift.querySelector('.n').textContent = lift; UI.tLift.classList.toggle('used', !lift); UI.tLift.classList.toggle('arm', liftArmed);
 }
 
-function pushUndo() {
-  state.undo.push({ crates: cloneCrates(state.crates), moves: state.moves });
-  if (state.undo.length > 60) state.undo.shift();
+/* ---------- undo ---------- */
+function snap() { return { s: BS.snapshot(st), moves: moves }; }
+function pushUndo(s) { undoStack.push(s); if (undoStack.length > 200) undoStack.shift(); }
+function undo() {
+  if (mode !== 'play' || drag || anims.length || !undoStack.length) return;
+  var s = undoStack.pop(); BS.restore(st, s.s); moves = s.moves;
+  st.pieces.forEach(function (p) { p.vx = p.x; p.vy = p.y; p.wasFrozen = BS.frozen(st, p); });
+  st.doors.forEach(function (d) { d.wasOpen = BS.doorOpen(st, d); d.openT = d.wasOpen ? 1 : 0; });
+  SFX.drop(); syncHud();
 }
 
-function trySlide(crateId, dx, dy) {
-  if (!state || (dx === 0 && dy === 0)) return false;
-  if (anim.some(a => a.kind === 'slide' || a.kind === 'ship')) return false;
-  const crate = state.crates.find(c => c.id === crateId);
-  if (!crate) return false;
-
-  let x = crate.x, y = crate.y;
-  let nx = x + dx, ny = y + dy;
-  const first = occupied(nx, ny, crate.id);
-  if (first === 'wall' || first === 'crate' || first === 'edge') {
-    // wrong-color door also blocks
-    sfx('block');
-    bump(crate);
-    return false;
+/* ---------- input: free drag along the grid ---------- */
+function pt(e) { return { x: e.clientX, y: e.clientY }; }
+function pieceAt(x, y) {
+  if (!G) return null;
+  var gx = Math.floor((x - G.ox) / G.cs), gy = Math.floor((y - G.oy) / G.cs);
+  for (var i = 0; i < st.pieces.length; i++) {
+    var p = st.pieces[i]; if (!p.alive) continue;
+    for (var j = 0; j < p.cells.length; j++) if (p.x + p.cells[j][0] === gx && p.y + p.cells[j][1] === gy) return p;
   }
-  if (typeof first === 'string' && first.startsWith('door:')) {
-    const col = first.slice(5);
-    if (col !== crate.c) { sfx('block'); bump(crate); return false; }
-    // ship immediately one step into door
-    pushUndo();
-    state.moves++;
-    UI.hudMv.textContent = String(state.moves);
-    shipCrate(crate, nx, ny);
-    return true;
-  }
+  // forgiving touch: nearest crate cell within 0.45 cell
+  var best = null, bd = .45 * G.cs;
+  st.pieces.forEach(function (p) {
+    if (!p.alive) return;
+    p.cells.forEach(function (c) {
+      var cx = G.ox + (p.x + c[0] + .5) * G.cs, cy = G.oy + (p.y + c[1] + .5) * G.cs, dd = Math.max(Math.abs(cx - x), Math.abs(cy - y)) - G.cs / 2;
+      if (dd < bd) { bd = dd; best = p; }
+    });
+  });
+  return best;
+}
+cv.addEventListener('pointerdown', function (e) {
+  if (mode !== 'play' || drag || anims.some(function (a) { return a.block; })) return;
+  audio();
+  var q = pt(e), p = pieceAt(q.x, q.y);
+  if (!p) return;
+  if (liftArmed) { useLift(p); return; }
+  if (BS.frozen(st, p)) { p.pop = 1; SFX.bump(); buzz(15); toast('Frosted — thaws after <b>' + BS.frostLeft(st, p) + '</b> more load' + (BS.frostLeft(st, p) > 1 ? 's' : ''), 1500); return; }
+  started = true; if (!liftArmed) { clearTimeout(toastTimer); UI.toast.classList.remove('on'); }
+  try { cv.setPointerCapture(e.pointerId); } catch (er) {}
+  drag = { p: p, id: e.pointerId, sx: q.x, sy: q.y, x0: p.x, y0: p.y, ox: 0, oy: 0, g: BS.grid(st), before: snap(), steps: 0 };
+  SFX.pick(); buzz(8);
+});
+cv.addEventListener('pointermove', function (e) {
+  if (!drag || e.pointerId !== drag.id) return;
+  var q = pt(e);
+  advance(drag.x0 + (q.x - drag.sx) / G.cs, drag.y0 + (q.y - drag.sy) / G.cs);
+});
+function endDrag(e) {
+  if (!drag || (e && e.pointerId !== drag.id)) return;
+  var d = drag, p = d.p; drag = null;
+  if (d.ox) { if (Math.abs(d.ox) >= .5) p.x += Math.sign(d.ox); }
+  if (d.oy) { if (Math.abs(d.oy) >= .5) p.y += Math.sign(d.oy); }
+  if (p.x !== d.x0 || p.y !== d.y0) { pushUndo(d.before); moves++; SFX.drop(); buzz(6); }
+  syncHud();
+}
+cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
 
-  // slide until blocked
-  let lastX = x, lastY = y;
-  while (true) {
-    nx = lastX + dx; ny = lastY + dy;
-    const hit = occupied(nx, ny, crate.id);
-    if (!hit) { lastX = nx; lastY = ny; continue; }
-    if (typeof hit === 'string' && hit.startsWith('door:')) {
-      const col = hit.slice(5);
-      if (col === crate.c) {
-        pushUndo();
-        state.moves++;
-        UI.hudMv.textContent = String(state.moves);
-        // animate slide to door then ship
-        const from = { x: crate.x, y: crate.y };
-        crate.x = nx; crate.y = ny;
-        anim.push({
-          kind: 'slide', id: crate.id, from, to: { x: nx, y: ny },
-          t: 0, dur: 0.12 + 0.04 * (Math.abs(nx - from.x) + Math.abs(ny - from.y)),
-          thenShip: true, color: crate.c
-        });
-        sfx('slide');
-        return true;
+function advance(tx, ty) {
+  var d = drag, p = d.p;
+  for (var it = 0; it < 60; it++) {
+    var dx = tx - (p.x + d.ox), dy = ty - (p.y + d.oy);
+    if (Math.abs(dx) < 1e-3 && Math.abs(dy) < 1e-3) return;
+    if (d.ox) { stepAxis('x', dx); continue; }
+    if (d.oy) { stepAxis('y', dy); continue; }
+    var order = Math.abs(dx) >= Math.abs(dy) ? ['x', 'y'] : ['y', 'x'], moved = false;
+    for (var k = 0; k < 2; k++) {
+      var ax = order[k], dd = ax === 'x' ? dx : dy;
+      if (Math.abs(dd) < .02) continue;
+      var s = dd > 0 ? 1 : -1, sx = ax === 'x' ? s : 0, sy = ax === 'y' ? s : 0;
+      if (!BS.axisOk(p, sx, sy)) continue;
+      if (BS.fits(st, d.g, p, p.x + sx, p.y + sy)) { stepAxis(ax, dd); moved = true; break; }
+      if (Math.abs(dd) > .3) {
+        var door = BS.exitDoor(st, d.g, p, p.x, p.y, sx, sy);
+        if (door) { shipOut(p, door, sx, sy); return; }
+        if (bumpCool <= 0) { bumpCool = .35; SFX.bump(); buzz(10); p.pop = .6; }
       }
-      // wrong door — stop before it
-      break;
     }
-    break;
+    if (!moved) return;
   }
-  if (lastX === crate.x && lastY === crate.y) {
-    sfx('block'); bump(crate); return false;
+}
+function stepAxis(ax, dd) {
+  var d = drag, p = d.p, o = ax === 'x' ? d.ox : d.oy;
+  o = Math.max(-1, Math.min(1, o + dd));
+  if (o !== 0 && (ax === 'x' ? d.ox : d.oy) !== 0 && Math.sign(o) !== Math.sign(ax === 'x' ? d.ox : d.oy)) o = 0; // crossed back over the cell line
+  if (Math.abs(o) >= 1) { if (ax === 'x') p.x += Math.sign(o); else p.y += Math.sign(o); o = 0; d.steps++; SFX.step(d.steps); }
+  if (ax === 'x') d.ox = o; else d.oy = o;
+}
+
+/* ---------- shipping ---------- */
+function shipOut(p, door, sx, sy) {
+  var d = drag; drag = null;
+  pushUndo(d.before); moves++;
+  var col = BS.color(p), res = BS.ship(st, p);
+  combo = comboT > 0 ? combo + 1 : 0; comboT = 2.6;
+  doorFx[door.id] = 1;
+  var px = p.x, py = p.y;
+  if (res === 'gone') {
+    anims.push({ kind: 'exit', p: p, col: col, x: px, y: py, sx: sx, sy: sy, t: 0, dist: (sx ? p.bw : p.bh) + .2, door: door });
+    SFX.ship(combo); buzz([12, 30, 18]);
+  } else {
+    anims.push({ kind: 'peel', p: p, col: col, x: px, y: py, sx: sx, sy: sy, t: 0, door: door, block: true });
+    SFX.peel(); buzz(20);
   }
-  pushUndo();
-  state.moves++;
-  UI.hudMv.textContent = String(state.moves);
-  const from = { x: crate.x, y: crate.y };
-  crate.x = lastX; crate.y = lastY;
-  anim.push({
-    kind: 'slide', id: crate.id, from, to: { x: lastX, y: lastY },
-    t: 0, dur: 0.1 + 0.035 * (Math.abs(lastX - from.x) + Math.abs(lastY - from.y)),
-    thenShip: false
+  var c = doorMouth(door, p, px, py);
+  burst(c[0], c[1], PAL[col].f, 26, sx, sy);
+  floaters.push({ x: c[0] - sx * 30, y: c[1] - sy * 30, t: 0, txt: combo > 0 ? 'x' + (combo + 1) + '!' : '+1', col: PAL[col].l });
+  checkEvents();
+  syncHud();
+}
+function doorMouth(door, p, px, py) {
+  var cs = G.cs, a = 0, n = 0;
+  p.cells.forEach(function (c) { a += (door.side === 'L' || door.side === 'R') ? py + c[1] + .5 : px + c[0] + .5; n++; });
+  a = a / n * cs;
+  if (door.side === 'R') return [G.ox + G.bw, G.oy + a];
+  if (door.side === 'L') return [G.ox, G.oy + a];
+  if (door.side === 'T') return [G.ox + a, G.oy];
+  return [G.ox + a, G.oy + G.bh];
+}
+function checkEvents() {
+  st.pieces.forEach(function (p) {
+    if (!p.alive) return;
+    var fz = BS.frozen(st, p);
+    if (p.wasFrozen && !fz) { p.thawT = 1; setTimeout(SFX.thaw, 160); var c = pieceCenter(p); burst(c[0], c[1], '#cfeeff', 22); }
+    p.wasFrozen = fz;
   });
-  sfx('slide');
-  return true;
-}
-
-function shipCrate(crate, dx, dy) {
-  const from = { x: crate.x, y: crate.y };
-  const idx = state.crates.findIndex(c => c.id === crate.id);
-  if (idx >= 0) state.crates.splice(idx, 1);
-  if (selected >= state.crates.length) selected = state.crates.length - 1;
-  anim.push({
-    kind: 'ship', color: crate.c, from, to: { x: dx, y: dy },
-    t: 0, dur: 0.28
+  st.doors.forEach(function (d) {
+    var o = BS.doorOpen(st, d);
+    if (!d.wasOpen && o) { setTimeout(SFX.shutter, 120); toast('Shutter up — <b>' + d.c + '</b> bay open', 1600); }
+    d.wasOpen = o;
   });
-  burst(dx, dy, crate.c);
-  sfx('ship');
-  checkWin();
 }
-
-function checkWin() {
-  if (!state || state.crates.length) return;
-  // wait for ship anims
-  const pending = anim.some(a => a.kind === 'ship');
-  if (pending) {
-    state._pendingWin = true;
-    return;
+function pieceCenter(p) {
+  var sx = 0, sy = 0; p.cells.forEach(function (c) { sx += c[0] + .5; sy += c[1] + .5; });
+  return [G.ox + (p.vx + sx / p.cells.length) * G.cs, G.oy + (p.vy + sy / p.cells.length) * G.cs];
+}
+function useLift(p) {
+  liftArmed = false; lift = 0;
+  pushUndo(snap()); moves++;
+  var col = BS.color(p); p.li = p.colors.length - 1; st.shipped++; st.by[col] = (st.by[col] || 0) + 1; p.alive = false;
+  var c = pieceCenter(p);
+  anims.push({ kind: 'lift', p: p, col: col, t: 0 });
+  burst(c[0], c[1], PAL[col].f, 30); SFX.lift(); buzz(30);
+  checkEvents(); syncHud();
+}
+function burst(x, y, col, n, sx, sy) {
+  for (var i = 0; i < n; i++) {
+    var a = Math.random() * Math.PI * 2, sp = 60 + Math.random() * 220;
+    var vx = Math.cos(a) * sp, vy = Math.sin(a) * sp;
+    if (sx || sy) { vx = vx * .5 + (sx || 0) * 160 * Math.random(); vy = vy * .5 + (sy || 0) * 160 * Math.random(); }
+    parts.push({ x: x, y: y, vx: vx, vy: vy, life: .4 + Math.random() * .5, t: 0, r: 1.5 + Math.random() * 3.5, col: col, sq: Math.random() < .5 });
   }
-  doWin();
 }
 
+/* ---------- boosters ---------- */
+function useCoffee() {
+  if (mode !== 'play' || !coffee) return;
+  audio(); coffee = 0; freezeT = 10; started = true; SFX.coffee(); buzz(20); toast('Coffee break — clock frozen <b>10s</b>', 1600); syncHud();
+}
+function armLift() {
+  if (mode !== 'play' || !lift) return;
+  audio(); liftArmed = !liftArmed; SFX.tap(); if (liftArmed) toast('Tap a crate to <b>lift</b> it off the deck', 1800); syncHud();
+}
+
+/* ---------- win / fail ---------- */
 function doWin() {
-  const moves = state.moves;
-  const secs = Math.max(1, Math.round((performance.now() - state.started) / 1000));
-  if (levelIndex + 1 > save.cleared) save.cleared = levelIndex + 1;
-  const prev = save.best[levelIndex];
-  if (!prev || moves < prev) save.best[levelIndex] = moves;
+  var left = timeLeft, ratio = left / timeMax;
+  var stars = ratio >= .5 ? 3 : ratio >= .2 ? 2 : 1;
+  if (overtimeUsed) stars = 1;
+  save.stars[LV] = Math.max(save.stars[LV] || 0, stars);
+  save.unlocked = Math.max(save.unlocked, Math.min(LEVELS.length, LV + 2));
   writeSave();
-  UI.winStats.textContent = moves + ' moves · ' + secs + 's · ' + (LEVELS[levelIndex].name || '');
-  const lines = [
-    'Crates gone. The amber grid flickers once, then steadies.',
-    'Bay doors seal. Somewhere a whistle answers the dark.',
-    'Shift board ticks green. One less jam on the night dock.',
-    'The load is away. You can almost hear the harbor breathe.'
-  ];
-  UI.winLede.textContent = lines[levelIndex % lines.length];
-  UI.btnNext.textContent = levelIndex + 1 < LEVELS.length ? 'Next bay' : 'Finish shift';
-  sfx('win');
-  setMode('win');
+  UI.winTitle.textContent = LV + 1 >= LEVELS.length ? 'Last ferry out' : ['Ferry loaded', 'Deck cleared', 'Bay sealed', 'Clean sweep'][LV % 4];
+  UI.winStats.textContent = 'Bay ' + (LV + 1) + ' · ' + moves + ' drags · ' + fmt(left) + ' to spare';
+  UI.bNext.textContent = LV + 1 < LEVELS.length ? 'Next bay' : 'Clock out';
+  var sp = UI.stars.children;
+  for (var i = 0; i < 3; i++) { sp[i].className = ''; }
+  setMode('win'); SFX.win(); buzz([20, 40, 20, 40, 60]);
+  for (var j = 0; j < 3; j++) (function (j) { setTimeout(function () { sp[j].className = 'pop' + (j < stars ? ' on' : ''); if (j < stars) tone(880 + j * 220, .15, 'triangle', .05); }, 350 + j * 220); })(j);
+}
+function doFail() {
+  setMode('fail'); SFX.fail(); buzz([60, 40, 60]);
+  UI.failInfo.textContent = BS.remaining(st) + ' crate' + (BS.remaining(st) > 1 ? 's' : '') + ' still on the deck.';
+  UI.bOvertime.style.display = overtimeUsed ? 'none' : '';
+}
+function launchConfetti() {
+  var cols = Object.keys(PAL);
+  for (var i = 0; i < 90; i++) {
+    confetti.push({ x: W / 2 + (Math.random() - .5) * G.bw, y: G.oy + G.bh * Math.random(), vx: (Math.random() - .5) * 420, vy: -200 - Math.random() * 520,
+      r: 4 + Math.random() * 6, rot: Math.random() * 6, vr: (Math.random() - .5) * 12, col: PAL[cols[i % cols.length]].f, t: 0 });
+  }
 }
 
-function bump(crate) {
-  anim.push({ kind: 'bump', id: crate.id, t: 0, dur: 0.18 });
+/* ---------- drawing helpers ---------- */
+function rr(x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function glyph(g, x, y, s, col) {
+  ctx.save(); ctx.translate(x, y); ctx.lineWidth = Math.max(1.5, s * .16); ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  if (g === 'circle') { ctx.arc(0, 0, s * .42, 0, 7); ctx.fill(); }
+  else if (g === 'ring') { ctx.arc(0, 0, s * .38, 0, 7); ctx.stroke(); }
+  else if (g === 'tri') { ctx.moveTo(0, -s * .46); ctx.lineTo(s * .46, s * .38); ctx.lineTo(-s * .46, s * .38); ctx.closePath(); ctx.fill(); }
+  else if (g === 'square') { ctx.rect(-s * .36, -s * .36, s * .72, s * .72); ctx.fill(); }
+  else if (g === 'diamond') { ctx.moveTo(0, -s * .5); ctx.lineTo(s * .4, 0); ctx.lineTo(0, s * .5); ctx.lineTo(-s * .4, 0); ctx.closePath(); ctx.fill(); }
+  else if (g === 'plus') { ctx.lineWidth = s * .26; ctx.moveTo(-s * .4, 0); ctx.lineTo(s * .4, 0); ctx.moveTo(0, -s * .4); ctx.lineTo(0, s * .4); ctx.stroke(); }
+  else if (g === 'cross') { ctx.lineWidth = s * .24; ctx.moveTo(-s * .34, -s * .34); ctx.lineTo(s * .34, s * .34); ctx.moveTo(s * .34, -s * .34); ctx.lineTo(-s * .34, s * .34); ctx.stroke(); }
+  ctx.restore();
 }
-
-function burst(gx, gy, color) {
-  const g = boardGeom();
-  if (!g) return;
-  const px = g.ox + (gx + 0.5) * g.cell;
-  const py = g.oy + (gy + 0.5) * g.cell;
-  const col = COLORS[color] || COLORS.amber;
-  for (let i = 0; i < 14; i++) {
-    const a = Math.random() * Math.PI * 2;
-    const sp = 40 + Math.random() * 120;
-    particles.push({
-      x: px, y: py, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
-      life: 0.35 + Math.random() * 0.35, t: 0, r: 2 + Math.random() * 3,
-      color: col.fill
+function has(p, x, y) { for (var i = 0; i < p.cells.length; i++) if (p.cells[i][0] === x && p.cells[i][1] === y) return true; return false; }
+/* Crate body: union of cells with rounded outer corners and a beveled lip. */
+function crateShape(p, X, Y, cs, inset) {
+  ctx.beginPath();
+  p.cells.forEach(function (c) {
+    var x0 = X + c[0] * cs, y0 = Y + c[1] * cs, l = has(p, c[0] - 1, c[1]) ? 0 : inset, r = has(p, c[0] + 1, c[1]) ? 0 : inset,
+      t = has(p, c[0], c[1] - 1) ? 0 : inset, b = has(p, c[0], c[1] + 1) ? 0 : inset;
+    var rad = Math.min(cs * .2, 10);
+    var tl = (!l || !t) ? 0 : rad, tr = (!r || !t) ? 0 : rad, br = (!r || !b) ? 0 : rad, bl = (!l || !b) ? 0 : rad;
+    var x = x0 + l, y = y0 + t, w = cs - l - r, h = cs - t - b;
+    ctx.moveTo(x + tl, y); ctx.lineTo(x + w - tr, y); tr ? ctx.arcTo(x + w, y, x + w, y + tr, tr) : ctx.lineTo(x + w, y);
+    ctx.lineTo(x + w, y + h - br); br ? ctx.arcTo(x + w, y + h, x + w - br, y + h, br) : ctx.lineTo(x + w, y + h);
+    ctx.lineTo(x + bl, y + h); bl ? ctx.arcTo(x, y + h, x, y + h - bl, bl) : ctx.lineTo(x, y + h);
+    ctx.lineTo(x, y + tl); tl ? ctx.arcTo(x, y, x + tl, y, tl) : ctx.lineTo(x, y);
+    ctx.closePath();
+  });
+}
+function drawCrate(p, X, Y, cs, o) {
+  o = o || {};
+  var col = PAL[o.col || BS.color(p)], lift = o.lift || 0, ins = Math.max(2, cs * .06);
+  ctx.save();
+  if (o.alpha != null) ctx.globalAlpha = o.alpha;
+  // drop shadow
+  ctx.save(); ctx.translate(lift * 2, 4 + lift * 6); ctx.fillStyle = 'rgba(0,0,0,' + (.38 + lift * .12) + ')'; crateShape(p, X, Y, cs, ins); ctx.fill(); ctx.restore();
+  Y -= lift * 4;
+  // base (dark lip) then face
+  ctx.fillStyle = col.d; crateShape(p, X, Y, cs, ins); ctx.fill();
+  var g = ctx.createLinearGradient(0, Y, 0, Y + p.bh * cs);
+  g.addColorStop(0, col.l); g.addColorStop(.18, col.f); g.addColorStop(1, col.f);
+  ctx.fillStyle = g; ctx.save(); ctx.translate(0, -Math.max(2, cs * .07)); crateShape(p, X, Y, cs, ins + 1); ctx.fill(); ctx.restore();
+  // planks & bolts per cell
+  var face = Y - Math.max(2, cs * .07);
+  p.cells.forEach(function (c) {
+    var x0 = X + c[0] * cs, y0 = face + c[1] * cs;
+    ctx.fillStyle = 'rgba(0,0,0,.10)';
+    ctx.fillRect(x0 + ins + 3, y0 + cs * .36, cs - 2 * ins - 6, Math.max(1, cs * .03));
+    ctx.fillRect(x0 + ins + 3, y0 + cs * .66, cs - 2 * ins - 6, Math.max(1, cs * .03));
+    ctx.fillStyle = 'rgba(255,255,255,.35)';
+    [[.2, .2], [.8, .2], [.2, .8], [.8, .8]].forEach(function (b) {
+      var bx = b[0] < .5 ? !has(p, c[0] - 1, c[1]) : !has(p, c[0] + 1, c[1]), by = b[1] < .5 ? !has(p, c[0], c[1] - 1) : !has(p, c[0], c[1] + 1);
+      if (bx && by) { ctx.beginPath(); ctx.arc(x0 + b[0] * cs, y0 + b[1] * cs, Math.max(1.2, cs * .035), 0, 7); ctx.fill(); }
+    });
+  });
+  // wrapped: inner color core peeks through cling-wrap
+  if (p.colors.length > 1 && p.li < p.colors.length - 1 && !o.col) {
+    var inner = PAL[p.colors[p.li + 1]];
+    p.cells.forEach(function (c) {
+      var x0 = X + c[0] * cs, y0 = face + c[1] * cs, m = cs * .27;
+      rr(x0 + m, y0 + m, cs - 2 * m, cs - 2 * m, cs * .12); ctx.fillStyle = inner.f; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 1.5; ctx.stroke();
+    });
+    ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = 1.2; ctx.setLineDash([4, 4]);
+    crateShape(p, X, face, cs, ins + 3); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // stencil glyph on the most central cell
+  var best = p.cells[0], bc = 1e9, mx = 0, my = 0;
+  p.cells.forEach(function (c) { mx += c[0]; my += c[1]; }); mx /= p.cells.length; my /= p.cells.length;
+  p.cells.forEach(function (c) { var dd = Math.abs(c[0] - mx) + Math.abs(c[1] - my); if (dd < bc) { bc = dd; best = c; } });
+  var gx = X + (best[0] + .5) * cs, gy = face + (best[1] + .5) * cs;
+  if (!(p.colors.length > 1 && p.li < p.colors.length - 1)) glyph(col.g, gx, gy, cs * .34, 'rgba(0,0,0,.28)');
+  // rails: chevrons showing the only axis
+  if (p.rail) {
+    ctx.strokeStyle = 'rgba(20,20,30,.55)'; ctx.lineWidth = Math.max(2, cs * .07); ctx.lineCap = 'round';
+    p.cells.forEach(function (c) {
+      var cx = X + (c[0] + .5) * cs, cy = face + (c[1] + .5) * cs, a = cs * .22;
+      ctx.beginPath();
+      if (p.rail === 'h') { ctx.moveTo(cx - a, cy - a * .7); ctx.lineTo(cx - a * 1.6, cy); ctx.lineTo(cx - a, cy + a * .7); ctx.moveTo(cx + a, cy - a * .7); ctx.lineTo(cx + a * 1.6, cy); ctx.lineTo(cx + a, cy + a * .7); }
+      else { ctx.moveTo(cx - a * .7, cy - a); ctx.lineTo(cx, cy - a * 1.6); ctx.lineTo(cx + a * .7, cy - a); ctx.moveTo(cx - a * .7, cy + a); ctx.lineTo(cx, cy + a * 1.6); ctx.lineTo(cx + a * .7, cy + a); }
+      ctx.stroke();
     });
   }
-}
-
-function undo() {
-  if (!state || !state.undo.length) return;
-  if (anim.length) return;
-  const snap = state.undo.pop();
-  state.crates = cloneCrates(snap.crates);
-  state.moves = snap.moves;
-  UI.hudMv.textContent = String(state.moves);
-  selected = state.crates.length ? Math.min(selected, state.crates.length - 1) : -1;
-  sfx('undo');
-}
-
-function resetLevel() {
-  if (!state) return;
-  startLevel(levelIndex);
-  sfx('tap');
-}
-
-/* ——— rendering ——— */
-function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
-function easeOutBack(t) {
-  const c = 1.70158;
-  return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2);
-}
-
-function crateDrawPos(c) {
-  let x = c.x, y = c.y;
-  for (const a of anim) {
-    if (a.kind === 'slide' && a.id === c.id) {
-      const u = easeOutCubic(Math.min(1, a.t / a.dur));
-      x = a.from.x + (a.to.x - a.from.x) * u;
-      y = a.from.y + (a.to.y - a.from.y) * u;
-    }
-    if (a.kind === 'bump' && a.id === c.id) {
-      const u = a.t / a.dur;
-      const s = Math.sin(u * Math.PI) * 0.08;
-      x += s; y += s * 0.4;
-    }
-  }
-  return { x, y };
-}
-
-function draw() {
-  const now = performance.now();
-  const dt = Math.min(0.033, (now - t0) / 1000);
-  t0 = now;
-  pulse += dt;
-
-  ctx.clearRect(0, 0, W, H);
-  // backdrop
-  const grd = ctx.createRadialGradient(W * 0.5, H * 0.15, 0, W * 0.5, H * 0.4, Math.max(W, H) * 0.75);
-  grd.addColorStop(0, 'rgba(255,180,84,0.07)');
-  grd.addColorStop(0.45, 'rgba(40,70,110,0.08)');
-  grd.addColorStop(1, '#080a10');
-  ctx.fillStyle = grd;
-  ctx.fillRect(0, 0, W, H);
-
-  // stars / dock lights
-  for (const s of bgStars) {
-    ctx.globalAlpha = s.a * (0.7 + 0.3 * Math.sin(pulse * 1.7 + s.x * 10));
-    ctx.fillStyle = '#cfe0ff';
-    ctx.beginPath();
-    ctx.arc(s.x * W, s.y * H, s.r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-
-  // soft horizon line
-  ctx.strokeStyle = 'rgba(255,180,84,0.08)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, H * 0.72);
-  ctx.quadraticCurveTo(W * 0.5, H * 0.68, W, H * 0.72);
-  ctx.stroke();
-
-  if (mode === 'play' && state) drawBoard(dt);
-  else if (mode === 'title' || mode === 'how' || mode === 'levels') drawIdleDecor();
-  else if (mode === 'win') drawBoard(dt);
-
-  // particles always
-  for (let i = particles.length - 1; i >= 0; i--) {
-    const p = particles[i];
-    p.t += dt;
-    p.x += p.vx * dt;
-    p.y += p.vy * dt;
-    p.vy += 40 * dt;
-    const u = p.t / p.life;
-    if (u >= 1) { particles.splice(i, 1); continue; }
-    ctx.globalAlpha = 1 - u;
-    ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.r * (1 - u * 0.5), 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-
-  requestAnimationFrame(draw);
-}
-
-function drawIdleDecor() {
-  // floating preview crates
-  const cols = ['teal', 'coral', 'amber', 'violet'];
-  for (let i = 0; i < 4; i++) {
-    const col = COLORS[cols[i]];
-    const x = W * (0.18 + i * 0.2);
-    const y = H * 0.72 + Math.sin(pulse * 1.2 + i) * 10;
-    const s = Math.min(44, W * 0.1);
-    roundRect(x - s / 2, y - s / 2, s, s, 10);
-    ctx.fillStyle = col.fill;
-    ctx.globalAlpha = 0.85;
-    ctx.fill();
-    ctx.globalAlpha = 0.35;
-    ctx.strokeStyle = col.glow;
-    ctx.lineWidth = 6;
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-    // door stub
-    ctx.fillStyle = col.door;
-    ctx.globalAlpha = 0.7;
-    ctx.fillRect(x - s * 0.2, y + s / 2 + 8, s * 0.4, 6);
-    ctx.globalAlpha = 1;
-  }
-}
-
-function drawBoard(dt) {
-  const g = boardGeom();
-  if (!g) return;
-  const { cell, ox, oy, bw, bh } = g;
-
-  // update anims
-  for (let i = anim.length - 1; i >= 0; i--) {
-    const a = anim[i];
-    a.t += dt;
-    if (a.t >= a.dur) {
-      if (a.kind === 'slide' && a.thenShip) {
-        const crate = state.crates.find(c => c.id === a.id);
-        if (crate) shipCrate(crate, a.to.x, a.to.y);
-      }
-      anim.splice(i, 1);
-      if (state && state._pendingWin && !state.crates.length && !anim.some(x => x.kind === 'ship')) {
-        state._pendingWin = false;
-        doWin();
-      }
-    }
-  }
-
-  // board plate
-  ctx.save();
-  roundRect(ox - 10, oy - 10, bw + 20, bh + 20, 16);
-  ctx.fillStyle = 'rgba(14,18,28,0.92)';
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(180,200,230,0.14)';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  // inner glow rim
-  ctx.strokeStyle = 'rgba(255,180,84,0.12)';
-  ctx.lineWidth = 1;
-  roundRect(ox - 4, oy - 4, bw + 8, bh + 8, 12);
-  ctx.stroke();
-
-  // cells
-  for (let y = 0; y < state.h; y++) {
-    for (let x = 0; x < state.w; x++) {
-      const px = ox + x * cell, py = oy + y * cell;
-      const wall = state.walls.has(wallKey(x, y));
-      const door = state.doors.get(doorKey(x, y));
-      if (wall) {
-        roundRect(px + 3, py + 3, cell - 6, cell - 6, 8);
-        ctx.fillStyle = '#1a2230';
-        ctx.fill();
-        // rivets
-        ctx.fillStyle = 'rgba(120,140,170,0.25)';
-        [[6,6],[cell-10,6],[6,cell-10],[cell-10,cell-10]].forEach(([rx, ry]) => {
-          ctx.beginPath(); ctx.arc(px + rx, py + ry, 1.5, 0, Math.PI * 2); ctx.fill();
-        });
-      } else if (door) {
-        const col = COLORS[door];
-        roundRect(px + 4, py + 4, cell - 8, cell - 8, 10);
-        ctx.fillStyle = 'rgba(8,10,16,0.9)';
-        ctx.fill();
-        // dashed door frame
-        ctx.save();
-        ctx.strokeStyle = col.door;
-        ctx.globalAlpha = 0.55 + 0.25 * Math.sin(pulse * 3 + x);
-        ctx.lineWidth = 2.5;
-        ctx.setLineDash([5, 4]);
-        roundRect(px + 8, py + 8, cell - 16, cell - 16, 8);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.globalAlpha = 0.9;
-        // chevron
-        ctx.fillStyle = col.fill;
-        ctx.beginPath();
-        const cx = px + cell / 2, cy = py + cell / 2;
-        ctx.moveTo(cx, cy - 8); ctx.lineTo(cx + 7, cy + 5); ctx.lineTo(cx - 7, cy + 5);
-        ctx.closePath(); ctx.fill();
-        ctx.restore();
-        // label
-        ctx.fillStyle = col.door;
-        ctx.globalAlpha = 0.7;
-        ctx.font = '600 9px system-ui';
-        ctx.textAlign = 'center';
-        ctx.fillText('BAY', cx, py + cell - 8);
-        ctx.globalAlpha = 1;
-      } else {
-        // floor tile
-        roundRect(px + 2, py + 2, cell - 4, cell - 4, 6);
-        ctx.fillStyle = ((x + y) & 1) ? 'rgba(22,28,40,0.7)' : 'rgba(18,24,34,0.7)';
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(100,120,150,0.08)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-    }
-  }
-
-  // crates
-  state.crates.forEach((c, i) => {
-    const pos = crateDrawPos(c);
-    const px = ox + pos.x * cell;
-    const py = oy + pos.y * cell;
-    const col = COLORS[c.c];
-    const pad = 7;
-    const sel = i === selected;
-
-    // glow
-    ctx.save();
-    ctx.shadowColor = col.glow;
-    ctx.shadowBlur = sel ? 22 : 12;
-    roundRect(px + pad, py + pad, cell - pad * 2, cell - pad * 2, 12);
-    ctx.fillStyle = col.fill;
-    ctx.fill();
+  // frost
+  if (o.frost) {
+    ctx.save(); crateShape(p, X, face, cs, ins); ctx.clip();
+    ctx.fillStyle = 'rgba(200,235,255,' + (.62 * o.frostA) + ')'; ctx.fillRect(X, face, p.bw * cs, p.bh * cs);
+    ctx.strokeStyle = 'rgba(255,255,255,' + (.7 * o.frostA) + ')'; ctx.lineWidth = 1.2;
+    p.cells.forEach(function (c) {
+      var cx = X + (c[0] + .5) * cs, cy = face + (c[1] + .5) * cs;
+      for (var k = 0; k < 6; k++) { var a = k * Math.PI / 3 + .3; ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * cs * .1, cy + Math.sin(a) * cs * .1); ctx.lineTo(cx + Math.cos(a) * cs * .42, cy + Math.sin(a) * cs * .42); ctx.stroke(); }
+    });
     ctx.restore();
-
-    // inner highlight
-    roundRect(px + pad + 3, py + pad + 3, cell - pad * 2 - 6, (cell - pad * 2) * 0.35, 8);
-    ctx.fillStyle = 'rgba(255,255,255,0.22)';
-    ctx.fill();
-
-    // barcode stripe
-    ctx.fillStyle = 'rgba(0,0,0,0.22)';
-    for (let k = 0; k < 4; k++) {
-      ctx.fillRect(px + pad + 8 + k * 5, py + cell - pad - 14, 2, 8);
+    if (o.frostN) {
+      var r = Math.max(13, cs * .3);
+      ctx.globalAlpha = (o.alpha != null ? o.alpha : 1) * o.frostA;
+      ctx.beginPath(); ctx.arc(gx, gy, r, 0, 7); ctx.fillStyle = '#0d2236'; ctx.fill(); ctx.strokeStyle = '#9fdcff'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#e6f6ff'; ctx.font = '800 ' + Math.round(r * 1.05) + 'px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(o.frostN, gx, gy + 1);
     }
-
-    if (sel) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
-      ctx.lineWidth = 2;
-      roundRect(px + pad - 2, py + pad - 2, cell - pad * 2 + 4, cell - pad * 2 + 4, 14);
-      ctx.stroke();
-    }
-  });
-
-  // ship anims (ghost crate flying into door)
-  for (const a of anim) {
-    if (a.kind !== 'ship') continue;
-    const u = easeOutBack(Math.min(1, a.t / a.dur));
-    const x = a.from.x + (a.to.x - a.from.x) * Math.min(1, u);
-    const y = a.from.y + (a.to.y - a.from.y) * Math.min(1, u);
-    const px = ox + x * cell, py = oy + y * cell;
-    const col = COLORS[a.color];
-    const scale = 1 - u * 0.55;
-    const alpha = 1 - u * 0.85;
-    const s = (cell - 14) * scale;
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.shadowColor = col.glow;
-    ctx.shadowBlur = 20;
-    roundRect(px + (cell - s) / 2, py + (cell - s) / 2, s, s, 10);
-    ctx.fillStyle = col.fill;
-    ctx.fill();
-    ctx.restore();
   }
-
-  // level name tag
-  ctx.fillStyle = 'rgba(180,190,210,0.45)';
-  ctx.font = '600 11px system-ui';
-  ctx.textAlign = 'center';
-  ctx.fillText(state.name.toUpperCase(), ox + bw / 2, oy - 18);
-
+  if (o.sel) { ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2.5; crateShape(p, X, face, cs, ins - 1); ctx.stroke(); }
   ctx.restore();
 }
 
-function roundRect(x, y, w, h, r) {
-  const rr = Math.min(r, w / 2, h / 2);
-  ctx.beginPath();
-  ctx.moveTo(x + rr, y);
-  ctx.arcTo(x + w, y, x + w, y + h, rr);
-  ctx.arcTo(x + w, y + h, x, y + h, rr);
-  ctx.arcTo(x, y + h, x, y, rr);
-  ctx.arcTo(x, y, x + w, y, rr);
-  ctx.closePath();
-}
-
-/* ——— input ——— */
-let touchStart = null;
-
-function cellAt(clientX, clientY) {
-  const g = boardGeom();
-  if (!g || !state) return null;
-  const x = Math.floor((clientX - g.ox) / g.cell);
-  const y = Math.floor((clientY - g.oy) / g.cell);
-  if (x < 0 || y < 0 || x >= state.w || y >= state.h) return null;
-  return { x, y };
-}
-
-function crateAt(x, y) {
-  return state.crates.findIndex(c => c.x === x && c.y === y);
-}
-
-function onPointerDown(e) {
-  if (mode !== 'play') return;
-  const t = e.changedTouches ? e.changedTouches[0] : e;
-  touchStart = { x: t.clientX, y: t.clientY, t: performance.now() };
-  const cell = cellAt(t.clientX, t.clientY);
-  if (cell) {
-    const i = crateAt(cell.x, cell.y);
-    if (i >= 0) { selected = i; sfx('tap'); }
+/* ---------- board ---------- */
+function solidAt(x, y) { return x < 0 || y < 0 || x >= st.w || y >= st.h || st.kind[y * st.w + x] === 2; }
+function drawBoard() {
+  var cs = G.cs, F = G.F, ox = G.ox, oy = G.oy;
+  // frame (follows the dock outline)
+  ctx.save();
+  for (var y = 0; y < st.h; y++) for (var x = 0; x < st.w; x++) {
+    if (solidAt(x, y)) continue;
+    var px = ox + x * cs, py = oy + y * cs;
+    ctx.fillStyle = '#1b2230';
+    ctx.fillRect(px - F, py - F, cs + 2 * F, cs + 2 * F);
   }
+  for (y = 0; y < st.h; y++) for (x = 0; x < st.w; x++) {
+    if (solidAt(x, y)) continue;
+    px = ox + x * cs; py = oy + y * cs;
+    // hazard stripe lip on outer edges
+    ctx.save(); ctx.beginPath();
+    if (solidAt(x, y - 1)) ctx.rect(px - 2, py - 7, cs + 4, 5);
+    if (solidAt(x, y + 1)) ctx.rect(px - 2, py + cs + 2, cs + 4, 5);
+    if (solidAt(x - 1, y)) ctx.rect(px - 7, py - 2, 5, cs + 4);
+    if (solidAt(x + 1, y)) ctx.rect(px + cs + 2, py - 2, 5, cs + 4);
+    ctx.clip();
+    for (var k = -40; k < cs + 40; k += 10) { ctx.fillStyle = (Math.floor((px + py + k) / 10) & 1) ? '#f2b636' : '#1a1a1a'; ctx.beginPath(); ctx.moveTo(px + k - 20, py - 20); ctx.lineTo(px + k - 10, py - 20); ctx.lineTo(px + k + cs + 10, py + cs + 20); ctx.lineTo(px + k + cs, py + cs + 20); ctx.fill(); }
+    ctx.restore();
+  }
+  // deck plates
+  for (y = 0; y < st.h; y++) for (x = 0; x < st.w; x++) {
+    if (solidAt(x, y)) continue;
+    px = ox + x * cs; py = oy + y * cs;
+    ctx.fillStyle = ((x + y) & 1) ? '#141a25' : '#111620'; ctx.fillRect(px, py, cs, cs);
+    ctx.strokeStyle = 'rgba(140,160,190,.08)'; ctx.lineWidth = 1; ctx.strokeRect(px + .5, py + .5, cs - 1, cs - 1);
+    ctx.fillStyle = 'rgba(140,160,190,.09)';
+    ctx.beginPath(); ctx.arc(px + cs * .5, py + cs * .5, 1.4, 0, 7); ctx.fill();
+    if (st.kind[y * st.w + x] === 1) drawBollard(px, py, cs);
+  }
+  ctx.restore();
+  // rail tracks under railed crates
+  st.pieces.forEach(function (p) {
+    if (!p.alive || !p.rail) return;
+    ctx.strokeStyle = 'rgba(255,179,65,.16)'; ctx.lineWidth = 2; ctx.setLineDash([6, 6]);
+    p.cells.forEach(function (c) {
+      ctx.beginPath();
+      if (p.rail === 'h') { var yy = oy + (p.y + c[1] + .5) * cs; ctx.moveTo(ox + 4, yy); ctx.lineTo(ox + G.bw - 4, yy); }
+      else { var xx = ox + (p.x + c[0] + .5) * cs; ctx.moveTo(xx, oy + 4); ctx.lineTo(xx, oy + G.bh - 4); }
+      ctx.stroke();
+    });
+    ctx.setLineDash([]);
+  });
+}
+function drawBollard(px, py, cs) {
+  var cx = px + cs / 2, cy = py + cs / 2, r = cs * .3;
+  ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.beginPath(); ctx.ellipse(cx + 2, cy + 5, r, r * .8, 0, 0, 7); ctx.fill();
+  var g = ctx.createLinearGradient(cx - r, 0, cx + r, 0); g.addColorStop(0, '#3a4252'); g.addColorStop(.5, '#6b7487'); g.addColorStop(1, '#2a303c');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill();
+  ctx.fillStyle = '#f2b636'; ctx.beginPath(); ctx.arc(cx, cy, r * .55, 0, 7); ctx.fill();
+  ctx.fillStyle = '#1a1a1a'; ctx.beginPath(); ctx.arc(cx, cy, r * .22, 0, 7); ctx.fill();
+}
+function doorRect(d) {
+  var cs = G.cs, F = G.F, a = d.at * cs, l = d.len * cs;
+  if (d.side === 'T') return [G.ox + a, G.oy - F, l, F];
+  if (d.side === 'B') return [G.ox + a, G.oy + G.bh, l, F];
+  if (d.side === 'L') return [G.ox - F, G.oy + a, F, l];
+  return [G.ox + G.bw, G.oy + a, F, l];
+}
+function drawDoors(dt) {
+  st.doors.forEach(function (d) {
+    var r = doorRect(d), col = PAL[d.c], open = BS.doorOpen(st, d);
+    d.openT += ((open ? 1 : 0) - d.openT) * Math.min(1, dt * 5);
+    var fx = doorFx[d.id] || 0;
+    var horiz = d.side === 'T' || d.side === 'B';
+    ctx.save();
+    // slot
+    ctx.fillStyle = '#06080c'; ctx.fillRect(r[0] + 1, r[1] + 1, r[2] - 2, r[3] - 2);
+    // light bar + glow
+    ctx.shadowColor = col.f; ctx.shadowBlur = 10 + fx * 26 + Math.sin(pulse * 3) * 3;
+    ctx.fillStyle = col.f;
+    var bar = 4;
+    if (d.side === 'T') ctx.fillRect(r[0] + 3, r[1] + r[3] - bar - 1, r[2] - 6, bar);
+    if (d.side === 'B') ctx.fillRect(r[0] + 3, r[1] + 1, r[2] - 6, bar);
+    if (d.side === 'L') ctx.fillRect(r[0] + r[2] - bar - 1, r[1] + 3, bar, r[3] - 6);
+    if (d.side === 'R') ctx.fillRect(r[0] + 1, r[1] + 3, bar, r[3] - 6);
+    ctx.shadowBlur = 0;
+    // chevrons pointing out + glyph
+    ctx.globalAlpha = .85;
+    var n = d.len, step = G.cs;
+    for (var i = 0; i < n; i++) {
+      var cx = horiz ? r[0] + step * (i + .5) : r[0] + r[2] / 2, cy = horiz ? r[1] + r[3] / 2 : r[1] + step * (i + .5);
+      if (i === Math.floor((n - 1) / 2)) glyph(col.g, cx, cy, 9, col.l);
+      else { ctx.strokeStyle = col.l; ctx.lineWidth = 2; ctx.beginPath(); var a = 4, sx = d.side === 'R' ? 1 : d.side === 'L' ? -1 : 0, sy = d.side === 'B' ? 1 : d.side === 'T' ? -1 : 0;
+        ctx.moveTo(cx - sx * a - sy * a, cy - sy * a - sx * a); ctx.lineTo(cx + sx * a, cy + sy * a); ctx.lineTo(cx - sx * a + sy * a, cy - sy * a + sx * a); ctx.stroke(); }
+    }
+    ctx.globalAlpha = 1;
+    // flash on ship
+    if (fx > 0) {
+      ctx.globalAlpha = fx * .8; ctx.fillStyle = '#fff'; ctx.fillRect(r[0], r[1], r[2], r[3]); ctx.globalAlpha = 1;
+      var gl = ctx.createRadialGradient(r[0] + r[2] / 2, r[1] + r[3] / 2, 0, r[0] + r[2] / 2, r[1] + r[3] / 2, G.cs * 1.6);
+      gl.addColorStop(0, col.f); gl.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalAlpha = fx * .5; ctx.fillStyle = gl; ctx.fillRect(r[0] - G.cs * 2, r[1] - G.cs * 2, r[2] + G.cs * 4, r[3] + G.cs * 4); ctx.globalAlpha = 1;
+    }
+    // roller shutter
+    if (d.lock && d.openT < .99) {
+      var cover = 1 - d.openT;
+      ctx.save(); ctx.beginPath(); ctx.rect(r[0], r[1], r[2], r[3]); ctx.clip();
+      var sw = horiz ? r[2] : r[2] * cover, sh = horiz ? r[3] * cover : r[3];
+      var sx0 = d.side === 'L' ? r[0] + r[2] - sw : r[0], sy0 = d.side === 'T' ? r[1] + r[3] - sh : r[1];
+      if (d.side === 'B') sy0 = r[1];
+      ctx.fillStyle = '#5a6272'; ctx.fillRect(sx0, sy0, sw, sh);
+      ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1;
+      for (var q = 0; q < (horiz ? r[2] : r[3]); q += 4) { ctx.beginPath(); if (horiz) { ctx.moveTo(sx0 + q, sy0); ctx.lineTo(sx0 + q, sy0 + sh); } else { ctx.moveTo(sx0, sy0 + q); ctx.lineTo(sx0 + sw, sy0 + q); } ctx.stroke(); }
+      ctx.restore();
+      if (cover > .5) {
+        var bx = r[0] + r[2] / 2, by = r[1] + r[3] / 2, lc = PAL[d.lock.c], left = BS.lockLeft(st, d);
+        ctx.beginPath(); ctx.arc(bx, by, 11, 0, 7); ctx.fillStyle = '#10141c'; ctx.fill(); ctx.strokeStyle = lc.f; ctx.lineWidth = 2.5; ctx.stroke();
+        ctx.fillStyle = lc.l; ctx.font = '800 12px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(left, bx, by + 1);
+      }
+    }
+    ctx.restore();
+  });
 }
 
-function onPointerUp(e) {
-  if (mode !== 'play' || !touchStart) return;
-  const t = e.changedTouches ? e.changedTouches[0] : e;
-  const dx = t.clientX - touchStart.x;
-  const dy = t.clientY - touchStart.y;
-  const dist = Math.hypot(dx, dy);
-  const start = touchStart;
-  touchStart = null;
-  if (dist < 18) return; // tap only selects
-  let mx = 0, my = 0;
-  if (Math.abs(dx) > Math.abs(dy)) mx = dx > 0 ? 1 : -1;
-  else my = dy > 0 ? 1 : -1;
-  if (selected < 0 || !state.crates[selected]) {
-    // try crate under start
-    const cell = cellAt(start.x, start.y);
-    if (cell) {
-      const i = crateAt(cell.x, cell.y);
-      if (i >= 0) selected = i;
+/* ---------- main loop ---------- */
+function frame(now) {
+  var dt = Math.min(.05, (now - lastT) / 1000); lastT = now; pulse += dt;
+  bumpCool -= dt; comboT -= dt;
+  if (mode === 'play' && st) {
+    if (started && !anims.some(function (a) { return a.block; })) {
+      if (freezeT > 0) freezeT = Math.max(0, freezeT - dt);
+      else if (!winPending) {
+        timeLeft = Math.max(0, timeLeft - dt);
+        var sec = Math.ceil(timeLeft);
+        if (sec <= 10 && sec !== lastTick && sec > 0) { lastTick = sec; SFX.tick(); }
+        if (timeLeft <= 0 && BS.remaining(st) > 0 && !drag) { syncHud(); doFail(); }
+      }
+    }
+    if (Math.floor(pulse * 10) !== Math.floor((pulse - dt) * 10)) syncHud();
+  }
+  draw(dt);
+  requestAnimationFrame(frame);
+}
+function draw(dt) {
+  ctx.clearRect(0, 0, W, H);
+  // night harbor backdrop
+  var bg = ctx.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#0b0f18'); bg.addColorStop(.55, '#07090e'); bg.addColorStop(1, '#0a0c10');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  var sun = ctx.createRadialGradient(W * .5, -H * .05, 0, W * .5, -H * .05, H * .7); sun.addColorStop(0, 'rgba(255,170,60,.13)'); sun.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = sun; ctx.fillRect(0, 0, W, H);
+  // crane lights blinking on the horizon
+  for (var i = 0; i < 6; i++) { var a = .25 + .25 * Math.sin(pulse * 1.3 + i * 1.7); ctx.fillStyle = 'rgba(255,90,70,' + a + ')'; ctx.beginPath(); ctx.arc(W * (.08 + i * .17), 40 + (i % 3) * 9, 1.8, 0, 7); ctx.fill(); }
+  if (!st || mode === 'title' || mode === 'how' || mode === 'levels') { drawIdle(dt); drawFx(dt); return; }
+  var shx = 0, shy = 0; if (shake > 0) { shake -= dt; shx = (Math.random() - .5) * 6 * shake * 4; shy = (Math.random() - .5) * 6 * shake * 4; }
+  ctx.save(); ctx.translate(shx, shy);
+  ctx.fillStyle = 'rgba(200,210,230,.5)'; ctx.font = '700 11px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText(('BAY ' + (LV + 1) + ' · ' + L.name).toUpperCase(), W / 2, G.oy - G.F - 10);
+  drawBoard();
+  drawDoors(dt);
+  Object.keys(doorFx).forEach(function (k) { doorFx[k] = Math.max(0, doorFx[k] - dt * 2.2); });
+  var cs = G.cs;
+  // static crates
+  st.pieces.forEach(function (p) {
+    if (!p.alive || anims.some(function (a) { return a.p === p && a.kind === 'peel'; })) return;
+    var tx = p.x, ty = p.y;
+    if (drag && drag.p === p) { tx += drag.ox; ty += drag.oy; p.vx = tx; p.vy = ty; }
+    else { var k = Math.min(1, dt * 22); p.vx += (tx - p.vx) * k; p.vy += (ty - p.vy) * k; if (Math.abs(p.vx - tx) < .002) p.vx = tx; if (Math.abs(p.vy - ty) < .002) p.vy = ty; }
+    if (drag && drag.p === p) return; // draw dragged last
+    p.pop = Math.max(0, p.pop - dt * 3); p.thawT = Math.max(0, p.thawT - dt * 1.6);
+    var fz = BS.frozen(st, p), jig = p.pop ? Math.sin(p.pop * 30) * p.pop * 3 : 0;
+    drawCrate(p, G.ox + p.vx * cs + jig, G.oy + p.vy * cs, cs, { frost: fz || p.thawT > 0, frostA: fz ? 1 : p.thawT, frostN: fz ? BS.frostLeft(st, p) : 0, sel: liftArmed && Math.sin(pulse * 8) > 0 });
+  });
+  if (drag) { var p = drag.p; drawCrate(p, G.ox + p.vx * cs, G.oy + p.vy * cs, cs, { lift: 1 }); }
+  // animations
+  for (var j = anims.length - 1; j >= 0; j--) {
+    var an = anims[j]; an.t += dt;
+    if (an.kind === 'exit') {
+      var spd = 13, off = Math.min(an.dist, an.t * an.t * 60 + an.t * spd);
+      var X = G.ox + (an.x + an.sx * off) * cs, Y = G.oy + (an.y + an.sy * off) * cs;
+      ctx.save(); ctx.beginPath(); ctx.rect(G.ox, G.oy, G.bw, G.bh); ctx.clip();
+      drawCrate(an.p, X, Y, cs, { col: an.col, lift: .5 });
+      ctx.restore();
+      if (Math.random() < .7) { var m = doorMouth(an.door, an.p, an.x, an.y); parts.push({ x: m[0] + (Math.random() - .5) * cs * .8 * (an.sy ? 1 : 0), y: m[1] + (Math.random() - .5) * cs * .8 * (an.sx ? 1 : 0), vx: an.sx * (120 + Math.random() * 160) + (Math.random() - .5) * 80, vy: an.sy * (120 + Math.random() * 160) + (Math.random() - .5) * 80, life: .35, t: 0, r: 2 + Math.random() * 2.5, col: PAL[an.col].l, sq: true }); }
+      if (off >= an.dist) { anims.splice(j, 1); shake = Math.max(shake, .06); }
+    } else if (an.kind === 'peel') {
+      var u = Math.min(1, an.t / .38), push = u < .45 ? (u / .45) * .45 : .45 * (1 - (u - .45) / .55);
+      var X2 = G.ox + (an.x + an.sx * push) * cs, Y2 = G.oy + (an.y + an.sy * push) * cs;
+      drawCrate(an.p, X2, Y2, cs, { col: u < .45 ? an.col : null });
+      if (u >= .45 && !an.torn) { an.torn = true; var c2 = pieceCenter(an.p); burst(c2[0], c2[1], '#ffffff', 16); burst(c2[0], c2[1], PAL[an.col].f, 14); }
+      if (u >= 1) anims.splice(j, 1);
+    } else if (an.kind === 'lift') {
+      var u2 = Math.min(1, an.t / .5);
+      drawCrate(an.p, G.ox + an.p.vx * cs, G.oy + an.p.vy * cs - u2 * cs * 2.2, cs, { col: an.col, alpha: 1 - u2, lift: 1 });
+      if (u2 >= 1) anims.splice(j, 1);
     }
   }
-  if (selected >= 0 && state.crates[selected]) {
-    trySlide(state.crates[selected].id, mx, my);
+  ctx.restore();
+  // win when the deck is empty and the last crate is through
+  if (mode === 'play' && BS.remaining(st) === 0 && !anims.length && !winPending) {
+    winPending = 1; launchConfetti(); SFX.ship(8); buzz([30, 30, 30]);
+    setTimeout(doWin, 750);
   }
+  drawFx(dt);
+}
+function drawFx(dt) {
+  for (var i = parts.length - 1; i >= 0; i--) {
+    var p = parts[i]; p.t += dt; if (p.t >= p.life) { parts.splice(i, 1); continue; }
+    p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .96; p.vy = p.vy * .96 + 260 * dt;
+    ctx.globalAlpha = 1 - p.t / p.life; ctx.fillStyle = p.col;
+    if (p.sq) ctx.fillRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2); else { ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); }
+  }
+  ctx.globalAlpha = 1;
+  for (i = floaters.length - 1; i >= 0; i--) {
+    var f = floaters[i]; f.t += dt; if (f.t > 1) { floaters.splice(i, 1); continue; }
+    ctx.globalAlpha = 1 - f.t; ctx.fillStyle = f.col; ctx.font = '900 ' + Math.round(18 + 6 * Math.sin(Math.min(1, f.t * 4) * Math.PI / 2)) + 'px system-ui';
+    ctx.textAlign = 'center'; ctx.fillText(f.txt, f.x, f.y - f.t * 40);
+  }
+  ctx.globalAlpha = 1;
+  for (i = confetti.length - 1; i >= 0; i--) {
+    var c = confetti[i]; c.t += dt; if (c.t > 3) { confetti.splice(i, 1); continue; }
+    c.x += c.vx * dt; c.y += c.vy * dt; c.vy += 700 * dt; c.vx *= .99; c.rot += c.vr * dt;
+    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.rot); ctx.globalAlpha = Math.min(1, 3 - c.t);
+    ctx.fillStyle = c.col; rr(-c.r, -c.r * .7, c.r * 2, c.r * 1.4, 2); ctx.fill(); ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}
+var idleP = null;
+function drawIdle(dt) {
+  if (!idleP) {
+    var shapes = ['o', 'h3', 'L', 'T', 'v2', '1', 'J', 'h2'], cols = Object.keys(PAL);
+    idleP = shapes.map(function (s, i) { var cells = BS.parseShape(BS.SHAPES[s]); var bw = 0, bh = 0; cells.forEach(function (c) { bw = Math.max(bw, c[0] + 1); bh = Math.max(bh, c[1] + 1); });
+      return { cells: cells, bw: bw, bh: bh, colors: [cols[i % cols.length]], li: 0, x: Math.random(), y: 0, ph: Math.random() * 6, sp: .02 + Math.random() * .03 }; });
+  }
+  var cs = Math.min(34, W / 12);
+  idleP.forEach(function (p, i) {
+    var x = W * ((p.x + pulse * p.sp) % 1.2 - .1), y = H * .78 + Math.sin(pulse * .9 + p.ph) * 10 + (i % 2) * cs * 1.4;
+    drawCrate(p, x, y, cs, { alpha: .5 });
+  });
 }
 
-canvas.addEventListener('touchstart', onPointerDown, { passive: true });
-canvas.addEventListener('touchend', onPointerUp, { passive: true });
-canvas.addEventListener('mousedown', onPointerDown);
-window.addEventListener('mouseup', onPointerUp);
-
-window.addEventListener('keydown', e => {
-  if (mode !== 'play' || !state) return;
-  const map = {
-    ArrowLeft: [-1, 0], a: [-1, 0], A: [-1, 0],
-    ArrowRight: [1, 0], d: [1, 0], D: [1, 0],
-    ArrowUp: [0, -1], w: [0, -1], W: [0, -1],
-    ArrowDown: [0, 1], s: [0, 1], S: [0, 1]
-  };
-  if (e.key === 'z' || e.key === 'Z' || e.key === 'u') { undo(); return; }
-  if (e.key === 'r' || e.key === 'R') { resetLevel(); return; }
-  if (e.key === 'Tab') {
-    e.preventDefault();
-    if (state.crates.length) selected = (selected + 1 + state.crates.length) % state.crates.length;
-    return;
-  }
-  const d = map[e.key];
-  if (d && selected >= 0 && state.crates[selected]) trySlide(state.crates[selected].id, d[0], d[1]);
+/* ---------- buttons ---------- */
+function on(id, fn) { $(id).addEventListener('click', function (e) { audio(); fn(e); }); }
+on('bPlay', function () { SFX.tap(); startLevel(Math.min(save.unlocked, LEVELS.length) - 1); });
+on('bLevels', function () { SFX.tap(); setMode('levels'); });
+on('bHow', function () { SFX.tap(); setMode('how'); });
+on('bHowBack', function () { SFX.tap(); setMode(st && mode === 'how' && howReturn ? howReturn : 'title'); });
+on('bLvlBack', function () { SFX.tap(); setMode('title'); });
+on('hudMenu', function () { if (mode !== 'play') return; SFX.tap(); UI.pauseInfo.textContent = 'Bay ' + (LV + 1) + ' · ' + fmt(timeLeft) + ' left · ' + BS.remaining(st) + ' crates on deck.'; setMode('pause'); });
+on('bResume', function () { SFX.tap(); setMode('play'); });
+on('bPRestart', function () { SFX.tap(); startLevel(LV); });
+on('bPMenu', function () { SFX.tap(); setMode('title'); });
+on('bNext', function () { SFX.tap(); if (LV + 1 < LEVELS.length) startLevel(LV + 1); else setMode('levels'); });
+on('bReplay', function () { SFX.tap(); startLevel(LV); });
+on('bWMenu', function () { SFX.tap(); setMode('levels'); });
+on('bRetry', function () { SFX.tap(); startLevel(LV); });
+on('bFMenu', function () { SFX.tap(); setMode('levels'); });
+on('bOvertime', function () { overtimeUsed = true; timeLeft = 30; lastTick = -1; SFX.coffee(); setMode('play'); syncHud(); });
+on('tUndo', undo);
+on('tRestart', function () { if (mode === 'play') { SFX.tap(); startLevel(LV); } });
+on('tCoffee', useCoffee);
+on('tLift', armLift);
+var howReturn = null;
+addEventListener('keydown', function (e) {
+  if (e.key === 'z' || e.key === 'Z' || e.key === 'u') undo();
+  if (e.key === 'r' || e.key === 'R') { if (mode === 'play') startLevel(LV); }
+  if (e.key === 'Escape' && mode === 'play') $('hudMenu').click();
 });
+document.addEventListener('visibilitychange', function () { if (document.hidden && mode === 'play') $('hudMenu').click(); });
+addEventListener('resize', resize);
+resize(); requestAnimationFrame(frame);
 
-/* ——— buttons ——— */
-document.getElementById('btnPlay').addEventListener('click', () => {
-  ensureAudio(); sfx('tap');
-  startLevel(Math.min(save.cleared, LEVELS.length - 1));
-});
-document.getElementById('btnHow').addEventListener('click', () => { sfx('tap'); setMode('how'); });
-document.getElementById('btnHowBack').addEventListener('click', () => { sfx('tap'); setMode('title'); });
-document.getElementById('btnLevels').addEventListener('click', () => { sfx('tap'); setMode('levels'); });
-document.getElementById('btnLvlBack').addEventListener('click', () => { sfx('tap'); setMode('title'); });
-document.getElementById('btnUndo').addEventListener('click', () => undo());
-document.getElementById('btnReset').addEventListener('click', () => resetLevel());
-document.getElementById('btnPause').addEventListener('click', () => { sfx('tap'); setMode('title'); });
-document.getElementById('btnReplay').addEventListener('click', () => { sfx('tap'); startLevel(levelIndex); });
-document.getElementById('btnMenu').addEventListener('click', () => { sfx('tap'); setMode('title'); });
-document.getElementById('btnNext').addEventListener('click', () => {
-  sfx('tap');
-  if (levelIndex + 1 < LEVELS.length) startLevel(levelIndex + 1);
-  else setMode('title');
-});
-
-window.addEventListener('resize', layout);
-layout();
-requestAnimationFrame(draw);
-
-/* Arcade library back-chip */
+/* ---------- Night Arcade back-chip ---------- */
 (function () {
   try {
     if (!/\bfrom=arcade\b/.test(location.search || '')) return;
-    const a = document.createElement('a');
-    a.href = '../../?from=game';
-    a.id = 'arcadeBack';
-    a.textContent = '← Library';
+    var a = document.createElement('a'); a.href = '../../?from=game'; a.id = 'arcadeBack'; a.textContent = '\u2190 Library';
     a.setAttribute('aria-label', 'Back to Night Arcade library');
-    Object.assign(a.style, {
-      position: 'fixed', left: 'max(10px, env(safe-area-inset-left))',
-      top: 'max(10px, env(safe-area-inset-top))', zIndex: '100',
-      padding: '8px 12px', borderRadius: '999px',
-      background: 'rgba(6,10,14,.78)', color: '#ffd08a',
-      border: '1px solid rgba(255,180,84,.4)',
-      font: '600 12px/1 system-ui,-apple-system,sans-serif',
-      letterSpacing: '.04em', textDecoration: 'none',
-      backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-      boxShadow: '0 4px 18px rgba(0,0,0,.45)',
-      touchAction: 'manipulation', pointerEvents: 'auto'
-    });
+    Object.assign(a.style, { position: 'fixed', left: 'max(10px, env(safe-area-inset-left))', top: 'max(10px, env(safe-area-inset-top))', zIndex: '100',
+      padding: '8px 12px', borderRadius: '999px', background: 'rgba(6,10,14,.78)', color: '#ffd08a', border: '1px solid rgba(255,180,84,.4)',
+      font: '600 12px/1 system-ui,-apple-system,sans-serif', letterSpacing: '.04em', textDecoration: 'none',
+      backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', boxShadow: '0 4px 18px rgba(0,0,0,.45)', touchAction: 'manipulation' });
     document.body.appendChild(a);
+    document.body.classList.add('from-arcade');
+    var hud = document.getElementById('hud'); hud.style.paddingLeft = 'calc(96px + env(safe-area-inset-left,0px))'; hud.style.justifyContent = 'flex-end';
   } catch (e) {}
 })();
-
 if (/^https?:$/.test(location.protocol)) {
-  const ml = document.createElement('link'); ml.rel = 'manifest'; ml.href = 'manifest.webmanifest'; document.head.appendChild(ml);
-  if ('serviceWorker' in navigator && window.isSecureContext) {
-    addEventListener('load', () => navigator.serviceWorker.register('sw.js').then(
-      r => { window.__sw = 'registered:' + r.scope; },
-      e => { window.__sw = 'failed:' + e.message; }
-    ));
-  }
+  var ml = document.createElement('link'); ml.rel = 'manifest'; ml.href = 'manifest.webmanifest'; document.head.appendChild(ml);
+  if ('serviceWorker' in navigator && window.isSecureContext) addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
 }
-
+/* debug / test hooks */
 window.__game = {
-  startLevel, LEVELS, get state() { return state; }, get mode() { return mode; },
-  trySlide, undo, resetLevel
+  get st() { return st; }, get mode() { return mode; }, get G() { return G; }, get timeLeft() { return timeLeft; }, LEVELS: LEVELS, BS: BS,
+  startLevel: startLevel, undo: undo,
+  cellCenter: function (x, y) { return [G.ox + (x + .5) * G.cs, G.oy + (y + .5) * G.cs]; },
+  unlockAll: function () { save.unlocked = LEVELS.length; writeSave(); }
 };
 })();
+
 </script>
 </body>
 </html>

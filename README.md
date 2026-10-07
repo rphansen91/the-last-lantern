@@ -12,7 +12,7 @@ icons/                procedural dark / grainy / cyan arcade icons
 .nojekyll             GitHub Pages: serve as plain static site
 games/
   the-last-lantern/   atmospheric horror exploration
-  bayshift/           sliding freight puzzle (midnight dock)
+  bayshift/           timed crate-escape puzzle (midnight dock)
 screenshots/          arcade UI captures (phone viewport)
 tools/arcade-icons.html  re-render arcade icons in headless Chrome
 ```
@@ -61,4 +61,4 @@ Nested at [`games/the-last-lantern/`](games/the-last-lantern/). Direct play URL:
 
 ## Bayshift
 
-Nested at [`games/bayshift/`](games/bayshift/). Direct play: [`games/bayshift/`](https://rphansen91.github.io/the-last-lantern/games/bayshift/). Slide glowing crates into matching bay doors — a casual spatial puzzle that rounds out the catalog beside The Last Lantern.
+Nested at [`games/bayshift/`](games/bayshift/). Direct play: [`games/bayshift/`](https://rphansen91.github.io/the-last-lantern/games/bayshift/). A timed crate-escape puzzle: drag multi-cell freight crates out through bay doors of their color, but only if they fit through the door, before the ferry whistle blows. 18 bays with frost, rails, shrink-wrap and roller shutters. Every bay is solver-checked (`node games/bayshift/tools/solve.js games/bayshift/index.html`).
