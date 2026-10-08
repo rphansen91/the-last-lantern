@@ -135,6 +135,99 @@ var RL = (function () {
     }
     return { ok: false };
   }
+  // ---- plain-language explanations for Listen (shared by the game and the tests) ----
+  // describe(st, s, nm) -> { text, ghost:[cell], forced:[cells], shadeStrong:[cells], shade:[cells], focus:[units], into:[units], empty:[units], targets:[cells] }
+  //   ghost: hypothetical (or answer) owl; forced: owls that would be forced after it; shadeStrong: squares that decide the step;
+  //   shade: other squares the hypothetical owl rules out; focus/into: lines/groves that force it; empty: the line/grove left with no spot.
+  // nm.reg(idx) returns the display name (html) of grove idx, e.g. a colored "blue".
+  function chainTrace(st, c) { // place c, follow forced singles; report the forced owls and the line/grove that runs dry
+    var t = st.clone(); t.place(c); var forced = [];
+    for (var g = 0; g < 40; g++) {
+      var s = stepSingles(t); if (!s) return null;
+      if (s.tech === 'dead') return { forced: forced, dead: s.focus[0], t: t };
+      forced.push({ cell: s.place, unit: s.focus[0] }); t.place(s.place);
+    }
+    return null;
+  }
+  function describe(st, s, nm) {
+    var n = st.n, N = n * n;
+    function one(u) { return u.kind === 'row' ? 'row ' + (u.idx + 1) : u.kind === 'col' ? 'column ' + (u.idx + 1) : 'the ' + nm.reg(u.idx) + ' grove'; }
+    function and(a) { return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
+    function sorted(us) { return us.map(function (u) { return u.idx; }).sort(function (a, b) { return a - b; }); }
+    function nums(idx) { // 1-based, consecutive runs as ranges: "4–5", "1, 3 and 5"
+      var r = [], i = 0;
+      while (i < idx.length) { var j = i; while (j + 1 < idx.length && idx[j + 1] === idx[j] + 1) j++;
+        if (j > i && idx.length === j - i + 1) r.push((idx[i] + 1) + '–' + (idx[j] + 1)); else for (var q = i; q <= j; q++) r.push(String(idx[q] + 1)); i = j + 1; }
+      return and(r);
+    }
+    function many(us) {
+      if (us.length === 1) return one(us[0]);
+      var k = us[0].kind, idx = sorted(us);
+      if (k === 'reg') return 'the ' + and(idx.map(nm.reg)) + ' groves';
+      return (k === 'row' ? 'rows ' : 'columns ') + nums(idx);
+    }
+    function colors(us) { return and(sorted(us).map(nm.reg)); }
+    function poss(x) { return x + "'s"; }
+    function cap(x) { return x.replace(/^((?:<[^>]*>)*)([a-z])/, function (m, tags, ch) { return tags + ch.toUpperCase(); }); }
+    var out = { text: '', ghost: [], forced: [], shadeStrong: [], shade: [], focus: [], into: [], empty: [], targets: [] };
+    if (s.tech === 'single') {
+      var u = s.focus[0];
+      out.focus = [u]; out.targets = [s.place]; out.ghost = [s.place];
+      out.text = cap(one(u)) + ' has one open square left, so its owl goes there. <b>Double-tap</b> it.';
+    } else if (/^confine/.test(s.tech)) {
+      var A = s.focus, Bu = s.into, a = many(A), b = many(Bu), k = A.length, ak = A[0].kind, bk = Bu[0].kind;
+      out.focus = A.slice(); out.into = Bu.slice(); out.shadeStrong = s.elim.slice(); out.targets = s.elim.slice();
+      if (k === 1) {
+        if (ak === 'reg') out.text = cap(a) + ' only fits in ' + b + ', so ' + poss(b) + ' owl is ' + nm.reg(A[0].idx) + '. Crossing out the rest.';
+        else if (bk === 'reg') out.text = cap(poss(a)) + ' open squares are all ' + nm.reg(Bu[0].idx) + ', so the ' + nm.reg(Bu[0].idx) + ' owl is in ' + a + '. Crossing out the rest of ' + nm.reg(Bu[0].idx) + '.';
+        else out.text = cap(poss(a)) + ' open squares are all in ' + b + ', so ' + poss(b) + ' owl is in ' + a + '. Crossing out the rest.';
+      } else {
+        var plural = bk === 'row' ? 'rows' : bk === 'col' ? 'columns' : 'groves';
+        if (ak === 'reg') { out.text = cap(a) + ' only fit in ' + b + ', so those ' + plural + '\u2019 owls are theirs. Crossing out the rest.';
+          if (out.text.replace(/<[^>]*>/g, '').length > 104) out.text = cap(colors(A)) + ' only fit in ' + b + ', so those ' + plural + '\u2019 owls are theirs. Crossing out the rest.'; }
+        else out.text = cap(a) + ' only have room in ' + (bk === 'reg' ? colors(Bu) : b) + ', so those ' + plural + '\u2019 owls sit here. Crossing out the rest.';
+      }
+    } else if (s.tech === 'crowd') {
+      var c = s.from, U = s.focus[0], cr = (c / n) | 0, cc = c % n, cs = st.cands(U), why = { grove: [], touch: [], row: [], col: [] };
+      cs.forEach(function (x) {
+        var xr = (x / n) | 0, xc = x % n;
+        if (U.kind !== 'reg' && st.b.reg[x] === st.b.reg[c]) why.grove.push(x);
+        else if (Math.abs(xr - cr) <= 1 && Math.abs(xc - cc) <= 1) why.touch.push(x);
+        else if (xr === cr) why.row.push(x); else if (xc === cc) why.col.push(x); else why.grove.push(x);
+      });
+      // clauses: verb phrases (subject "it" = the owl) or, for the grove, a full clause
+      var kinds = [], parts = [], line = why.row.length + why.col.length, gw = nm.reg(st.b.reg[c]), saidIt = false;
+      if (why.touch.length) kinds.push([why.touch.length, function (q) { return 'touches ' + q; }, 1]);
+      if (line) kinds.push([line, function (q) { return 'lines up with ' + q; }, 1]);
+      if (why.grove.length) kinds.push([why.grove.length, function (q, only) { return only ? q + ' in its own ' + gw + ' grove' : 'its ' + gw + ' grove holds ' + q; }, 0]);
+      kinds.forEach(function (kd, i) {
+        var m = kd[0], q, only = kinds.length === 1;
+        if (only) q = kd[2] ? (m === 1 ? 'its last open square' : m === 2 ? 'both of its squares' : 'all ' + m + ' of its squares') : (m === 1 ? 'its last open square is' : 'all ' + m + ' of its squares are');
+        else if (i === 0) q = m + (m === 1 ? ' square' : ' squares');
+        else if (i === kinds.length - 1) q = m === 1 ? 'the last one' : 'the other ' + m;
+        else q = m + ' more';
+        var cl = kd[1](q, only); if (kd[2] && !saidIt) { cl = 'it ' + cl; saidIt = true; }
+        parts.push(cl);
+      });
+      out.ghost = [c]; out.targets = [c]; out.empty = [U]; out.shadeStrong = cs.slice();
+      for (var i = 0; i < N; i++) if (st.cand[i] && i !== c && blocks(st.b, c, i) && cs.indexOf(i) < 0) out.shade.push(i);
+      out.text = 'An owl here blocks all of ' + one(U) + ': ' + and(parts) + '.';
+    } else if (s.tech === 'chain') {
+      var tr = chainTrace(st, s.from), c2 = s.from;
+      out.ghost = [c2]; out.targets = [c2];
+      if (tr) {
+        out.forced = tr.forced.map(function (f) { return f.cell; }); out.empty = [tr.dead];
+        out.focus = tr.forced.map(function (f) { return f.unit; });
+        out.shadeStrong = st.cands(tr.dead);
+        for (var j = 0; j < N; j++) if (st.cand[j] && !tr.t.cand[j] && j !== c2 && out.forced.indexOf(j) < 0 && out.shadeStrong.indexOf(j) < 0) out.shade.push(j);
+        var steps = tr.forced.map(function (f, i) { return one(f.unit) + (i ? ' only one' : ' only one spot'); });
+        if (tr.forced.length && tr.forced.length <= 2) out.text = 'An owl here leaves ' + steps.join(', then ') + ', and then ' + one(tr.dead) + ' none.';
+        else if (tr.forced.length) out.text = 'An owl here forces ' + tr.forced.length + ' more owls (faint), and then ' + one(tr.dead) + ' has no spot left.';
+        else out.text = 'An owl here blocks all of ' + one(tr.dead) + '.';
+      } else out.text = 'An owl here would run its neighbors out of room.';
+    }
+    return out;
+  }
   // ---- generator ----
   function randomPerm(n, R) {
     var cur = [], used = new Array(n).fill(false);
@@ -194,7 +287,7 @@ var RL = (function () {
     }
     return null;
   }
-  return { rng: rng, parse: parse, encode: encode, units: units, blocks: blocks, solve: solve, State: State, next: next, apply: apply, grade: grade, generate: generate, TECH_COST: TECH_COST };
+  return { rng: rng, parse: parse, encode: encode, units: units, blocks: blocks, solve: solve, State: State, next: next, apply: apply, grade: grade, generate: generate, TECH_COST: TECH_COST, describe: describe, chainTrace: chainTrace };
 })();
 /*ROOST-LOGIC-END*/
 if (typeof module !== 'undefined') module.exports = RL;

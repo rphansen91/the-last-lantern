@@ -60,7 +60,7 @@ h2{font-weight:700;letter-spacing:.1em;font-size:clamp(24px,7vw,34px);margin:0 0
 #hud{position:fixed;left:0;right:0;top:0;z-index:5;display:none;pointer-events:none;align-items:center;justify-content:center;gap:8px;
   padding:calc(10px + env(safe-area-inset-top,0px)) calc(10px + env(safe-area-inset-right,0px)) 0 calc(10px + env(safe-area-inset-left,0px))}
 body[data-mode=play] #hud{display:flex}
-html.cover #hud,html.cover #dock,html.cover #toast,html.cover body::after{display:none!important}
+html.cover #hud,html.cover #dock,html.cover #toast,html.cover #hintbar,html.cover body::after{display:none!important}
 .pill{pointer-events:auto;background:rgba(14,13,24,.82);border:1px solid var(--line);border-radius:999px;padding:0 13px;height:38px;font-size:13px;font-weight:700;
   letter-spacing:.05em;color:#d6d0ea;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 body.from-arcade .pill{padding:0 10px;gap:5px}
@@ -106,6 +106,15 @@ body[data-mode=play] #dock{display:flex}
   text-align:center;opacity:0;transition:opacity .35s,transform .35s;pointer-events:none}
 #toast.on{opacity:1;transform:translate(-50%,0)}
 #toast b{color:var(--gold)}
+/* Listen explanation bar: sits between the board and the dock, never over the board */
+#hintbar{position:fixed;left:50%;top:0;transform:translate(-50%,8px);z-index:6;width:min(376px,calc(100vw - 12px));
+  background:rgba(16,14,28,.96);border:1px solid rgba(255,210,122,.42);border-radius:14px;padding:8px 9px 8px 31px;font-size:13px;line-height:1.36;letter-spacing:-.005em;color:#ece7f6;
+  text-align:left;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+#hintbar.on{opacity:1;transform:translate(-50%,0)}
+#hintbar::before{content:'';position:absolute;left:8px;top:50%;width:18px;height:18px;margin-top:-9px;opacity:.9;
+  background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffd27a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 15a6 6 0 1 1 10.5 4c-1 1-1.5 2-1.5 3'/><path d='M9.5 12a2.5 2.5 0 1 1 4 2'/><path d='M19 3c1.5 1.5 2.3 3.4 2.3 5.5M17 5.5c.8.8 1.2 1.8 1.2 2.9'/></svg>") center/contain no-repeat}
+#hintbar b{color:var(--gold)}
+#hintbar b.gv{font-weight:800}
 .stat{color:var(--dim);letter-spacing:.06em;font-size:14px;margin:0 0 .5em;line-height:1.6}
 .stat b{color:#ece7ff;font-variant-numeric:tabular-nums}
 .badge{display:inline-block;margin:.2em 0 1em;padding:6px 12px;border-radius:999px;border:1px solid rgba(255,210,122,.5);color:var(--gold);font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:700}
@@ -132,6 +141,7 @@ body[data-mode=play] #dock{display:flex}
   <button class="tool" id="tRestart" type="button" aria-label="Clear the grove"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Clear</button>
 </div>
 <div id="toast"></div>
+<div id="hintbar" role="status" aria-live="polite"></div>
 
 <div id="title" class="ov">
   <div class="eyebrow">The Hush Wood · after moonrise</div>
@@ -338,6 +348,99 @@ var RL = (function () {
     }
     return { ok: false };
   }
+  // ---- plain-language explanations for Listen (shared by the game and the tests) ----
+  // describe(st, s, nm) -> { text, ghost:[cell], forced:[cells], shadeStrong:[cells], shade:[cells], focus:[units], into:[units], empty:[units], targets:[cells] }
+  //   ghost: hypothetical (or answer) owl; forced: owls that would be forced after it; shadeStrong: squares that decide the step;
+  //   shade: other squares the hypothetical owl rules out; focus/into: lines/groves that force it; empty: the line/grove left with no spot.
+  // nm.reg(idx) returns the display name (html) of grove idx, e.g. a colored "blue".
+  function chainTrace(st, c) { // place c, follow forced singles; report the forced owls and the line/grove that runs dry
+    var t = st.clone(); t.place(c); var forced = [];
+    for (var g = 0; g < 40; g++) {
+      var s = stepSingles(t); if (!s) return null;
+      if (s.tech === 'dead') return { forced: forced, dead: s.focus[0], t: t };
+      forced.push({ cell: s.place, unit: s.focus[0] }); t.place(s.place);
+    }
+    return null;
+  }
+  function describe(st, s, nm) {
+    var n = st.n, N = n * n;
+    function one(u) { return u.kind === 'row' ? 'row ' + (u.idx + 1) : u.kind === 'col' ? 'column ' + (u.idx + 1) : 'the ' + nm.reg(u.idx) + ' grove'; }
+    function and(a) { return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
+    function sorted(us) { return us.map(function (u) { return u.idx; }).sort(function (a, b) { return a - b; }); }
+    function nums(idx) { // 1-based, consecutive runs as ranges: "4–5", "1, 3 and 5"
+      var r = [], i = 0;
+      while (i < idx.length) { var j = i; while (j + 1 < idx.length && idx[j + 1] === idx[j] + 1) j++;
+        if (j > i && idx.length === j - i + 1) r.push((idx[i] + 1) + '–' + (idx[j] + 1)); else for (var q = i; q <= j; q++) r.push(String(idx[q] + 1)); i = j + 1; }
+      return and(r);
+    }
+    function many(us) {
+      if (us.length === 1) return one(us[0]);
+      var k = us[0].kind, idx = sorted(us);
+      if (k === 'reg') return 'the ' + and(idx.map(nm.reg)) + ' groves';
+      return (k === 'row' ? 'rows ' : 'columns ') + nums(idx);
+    }
+    function colors(us) { return and(sorted(us).map(nm.reg)); }
+    function poss(x) { return x + "'s"; }
+    function cap(x) { return x.replace(/^((?:<[^>]*>)*)([a-z])/, function (m, tags, ch) { return tags + ch.toUpperCase(); }); }
+    var out = { text: '', ghost: [], forced: [], shadeStrong: [], shade: [], focus: [], into: [], empty: [], targets: [] };
+    if (s.tech === 'single') {
+      var u = s.focus[0];
+      out.focus = [u]; out.targets = [s.place]; out.ghost = [s.place];
+      out.text = cap(one(u)) + ' has one open square left, so its owl goes there. <b>Double-tap</b> it.';
+    } else if (/^confine/.test(s.tech)) {
+      var A = s.focus, Bu = s.into, a = many(A), b = many(Bu), k = A.length, ak = A[0].kind, bk = Bu[0].kind;
+      out.focus = A.slice(); out.into = Bu.slice(); out.shadeStrong = s.elim.slice(); out.targets = s.elim.slice();
+      if (k === 1) {
+        if (ak === 'reg') out.text = cap(a) + ' only fits in ' + b + ', so ' + poss(b) + ' owl is ' + nm.reg(A[0].idx) + '. Crossing out the rest.';
+        else if (bk === 'reg') out.text = cap(poss(a)) + ' open squares are all ' + nm.reg(Bu[0].idx) + ', so the ' + nm.reg(Bu[0].idx) + ' owl is in ' + a + '. Crossing out the rest of ' + nm.reg(Bu[0].idx) + '.';
+        else out.text = cap(poss(a)) + ' open squares are all in ' + b + ', so ' + poss(b) + ' owl is in ' + a + '. Crossing out the rest.';
+      } else {
+        var plural = bk === 'row' ? 'rows' : bk === 'col' ? 'columns' : 'groves';
+        if (ak === 'reg') { out.text = cap(a) + ' only fit in ' + b + ', so those ' + plural + '\u2019 owls are theirs. Crossing out the rest.';
+          if (out.text.replace(/<[^>]*>/g, '').length > 104) out.text = cap(colors(A)) + ' only fit in ' + b + ', so those ' + plural + '\u2019 owls are theirs. Crossing out the rest.'; }
+        else out.text = cap(a) + ' only have room in ' + (bk === 'reg' ? colors(Bu) : b) + ', so those ' + plural + '\u2019 owls sit here. Crossing out the rest.';
+      }
+    } else if (s.tech === 'crowd') {
+      var c = s.from, U = s.focus[0], cr = (c / n) | 0, cc = c % n, cs = st.cands(U), why = { grove: [], touch: [], row: [], col: [] };
+      cs.forEach(function (x) {
+        var xr = (x / n) | 0, xc = x % n;
+        if (U.kind !== 'reg' && st.b.reg[x] === st.b.reg[c]) why.grove.push(x);
+        else if (Math.abs(xr - cr) <= 1 && Math.abs(xc - cc) <= 1) why.touch.push(x);
+        else if (xr === cr) why.row.push(x); else if (xc === cc) why.col.push(x); else why.grove.push(x);
+      });
+      // clauses: verb phrases (subject "it" = the owl) or, for the grove, a full clause
+      var kinds = [], parts = [], line = why.row.length + why.col.length, gw = nm.reg(st.b.reg[c]), saidIt = false;
+      if (why.touch.length) kinds.push([why.touch.length, function (q) { return 'touches ' + q; }, 1]);
+      if (line) kinds.push([line, function (q) { return 'lines up with ' + q; }, 1]);
+      if (why.grove.length) kinds.push([why.grove.length, function (q, only) { return only ? q + ' in its own ' + gw + ' grove' : 'its ' + gw + ' grove holds ' + q; }, 0]);
+      kinds.forEach(function (kd, i) {
+        var m = kd[0], q, only = kinds.length === 1;
+        if (only) q = kd[2] ? (m === 1 ? 'its last open square' : m === 2 ? 'both of its squares' : 'all ' + m + ' of its squares') : (m === 1 ? 'its last open square is' : 'all ' + m + ' of its squares are');
+        else if (i === 0) q = m + (m === 1 ? ' square' : ' squares');
+        else if (i === kinds.length - 1) q = m === 1 ? 'the last one' : 'the other ' + m;
+        else q = m + ' more';
+        var cl = kd[1](q, only); if (kd[2] && !saidIt) { cl = 'it ' + cl; saidIt = true; }
+        parts.push(cl);
+      });
+      out.ghost = [c]; out.targets = [c]; out.empty = [U]; out.shadeStrong = cs.slice();
+      for (var i = 0; i < N; i++) if (st.cand[i] && i !== c && blocks(st.b, c, i) && cs.indexOf(i) < 0) out.shade.push(i);
+      out.text = 'An owl here blocks all of ' + one(U) + ': ' + and(parts) + '.';
+    } else if (s.tech === 'chain') {
+      var tr = chainTrace(st, s.from), c2 = s.from;
+      out.ghost = [c2]; out.targets = [c2];
+      if (tr) {
+        out.forced = tr.forced.map(function (f) { return f.cell; }); out.empty = [tr.dead];
+        out.focus = tr.forced.map(function (f) { return f.unit; });
+        out.shadeStrong = st.cands(tr.dead);
+        for (var j = 0; j < N; j++) if (st.cand[j] && !tr.t.cand[j] && j !== c2 && out.forced.indexOf(j) < 0 && out.shadeStrong.indexOf(j) < 0) out.shade.push(j);
+        var steps = tr.forced.map(function (f, i) { return one(f.unit) + (i ? ' only one' : ' only one spot'); });
+        if (tr.forced.length && tr.forced.length <= 2) out.text = 'An owl here leaves ' + steps.join(', then ') + ', and then ' + one(tr.dead) + ' none.';
+        else if (tr.forced.length) out.text = 'An owl here forces ' + tr.forced.length + ' more owls (faint), and then ' + one(tr.dead) + ' has no spot left.';
+        else out.text = 'An owl here blocks all of ' + one(tr.dead) + '.';
+      } else out.text = 'An owl here would run its neighbors out of room.';
+    }
+    return out;
+  }
   // ---- generator ----
   function randomPerm(n, R) {
     var cur = [], used = new Array(n).fill(false);
@@ -397,7 +500,7 @@ var RL = (function () {
     }
     return null;
   }
-  return { rng: rng, parse: parse, encode: encode, units: units, blocks: blocks, solve: solve, State: State, next: next, apply: apply, grade: grade, generate: generate, TECH_COST: TECH_COST };
+  return { rng: rng, parse: parse, encode: encode, units: units, blocks: blocks, solve: solve, State: State, next: next, apply: apply, grade: grade, generate: generate, TECH_COST: TECH_COST, describe: describe, chainTrace: chainTrace };
 })();
 /*ROOST-LOGIC-END*/
 /*ROOST-LEVELS-START*/
@@ -450,6 +553,7 @@ var GROVES = [
   { name: 'Lichen', c: '#ad9c40' }, { name: 'Rose', c: '#bd5480' }, { name: 'Tide', c: '#2c9e98' }, { name: 'Dusk', c: '#5c68d6' },
   { name: 'Bark', c: '#93705a' }, { name: 'Fern', c: '#79ad38' }
 ];
+var COLOR_WORD = ['blue', 'purple', 'green', 'orange', 'yellow', 'pink', 'teal', 'indigo', 'brown', 'lime'];
 var CAMPAIGN = LEVELS.length, COVER = /\bcover=1\b/.test(location.search || '');
 if (COVER) document.documentElement.classList.add('cover');
 var SAVE_KEY = 'moonroost-v1';
@@ -562,12 +666,12 @@ function startSpec(sp) {
   owlT = new Float64Array(NN); shakeT = new Float64Array(NN); pS = new Float32Array(NN).fill(1); pV = new Float32Array(NN); pTgt = new Float32Array(NN).fill(1);
   regionOwl = new Int16Array(N).fill(-1); regionT = new Float64Array(N);
   moons = 3; revived = false; hints = 0; mistakes = 0; owls = 0; elapsed = 0; running = false; started = false; won = false;
-  undoStack = []; particles = []; ghosts = []; hintFx = null; boardShake = 0; winT = 0; lastTap = null; stroke = null;
+  undoStack = []; particles = []; ghosts = []; hintFx = null; hideHintBar(true); boardShake = 0; winT = 0; lastTap = null; stroke = null;
   if (sp.kind === 'camp') { save.cur = sp.idx; writeSave(); }
   $('hudLv').textContent = sp.label; renderMoons(); renderListen(); $('timer').textContent = '0:00';
   setMode('play'); layout();
-  if (sp.kind === 'camp' && sp.idx === 0) setTimeout(function () { toast('<b>Tap</b> to cross out a branch. <b>Double-tap</b> to land an owl.', 4200); }, 500);
-  else if (sp.kind === 'camp' && sp.idx === 1) setTimeout(function () { toast('<b>Drag</b> across branches to cross out a whole line at once.', 3600); }, 500);
+  if (sp.kind === 'camp' && sp.idx === 0) setTimeout(function () { if (!hintBarOn && SP === sp) toast('<b>Tap</b> to cross out a branch. <b>Double-tap</b> to land an owl.', 4200); }, 500);
+  else if (sp.kind === 'camp' && sp.idx === 1) setTimeout(function () { if (!hintBarOn && SP === sp) toast('<b>Drag</b> across branches to cross out a whole line at once.', 3600); }, 500);
 }
 function setMode(m) {
   mode = m; document.body.setAttribute('data-mode', m === 'play' || m === 'won' ? 'play' : m);
@@ -714,6 +818,62 @@ function drawCross(x, y, s, a, sc) {
   ctx.strokeStyle = '#efe8d6'; ctx.lineWidth = s * .1; ctx.beginPath(); ctx.moveTo(-s * .2, -s * .2); ctx.lineTo(s * .2, s * .2); ctx.moveTo(s * .2, -s * .2); ctx.lineTo(-s * .2, s * .2); ctx.stroke();
   ctx.restore();
 }
+/* Listen visuals: hypothetical owl (ghost), squares it rules out, and outlines of the rows/columns/groves involved */
+var HINT_HOLD = 3600, HINT_FADE = 900;
+function hintAlpha(now) { // 0..1 envelope for the whole highlight
+  var fx = hintFx, a = Math.min(1, (now - fx.t0) / 220);
+  if (fx.committed) a *= Math.min(1, Math.max(0, 1 - (now - fx.tc) / (fx.mode === 'place' || fx.mode === 'fix' ? 2600 : HINT_FADE)));
+  return a;
+}
+function fillCell(c, style) { ctx.fillStyle = style; ctx.fillRect(G.ox + (c % N) * G.cs, G.oy + ((c / N) | 0) * G.cs, G.cs, G.cs); }
+function outlineCells(cells, style, w, dash) {
+  var cs = G.cs, set = {}; cells.forEach(function (c) { set[c] = 1; });
+  ctx.save(); ctx.strokeStyle = style; ctx.lineWidth = w; ctx.lineCap = 'round'; if (dash) ctx.setLineDash(dash); ctx.beginPath();
+  var ins = w / 2;
+  cells.forEach(function (c) {
+    var r = (c / N) | 0, k = c % N, x0 = G.ox + k * cs, y0 = G.oy + r * cs, x1 = x0 + cs, y1 = y0 + cs;
+    if (r === 0 || !set[c - N]) { ctx.moveTo(x0, y0 + ins); ctx.lineTo(x1, y0 + ins); }
+    if (r === N - 1 || !set[c + N]) { ctx.moveTo(x0, y1 - ins); ctx.lineTo(x1, y1 - ins); }
+    if (k === 0 || !set[c - 1]) { ctx.moveTo(x0 + ins, y0); ctx.lineTo(x0 + ins, y1); }
+    if (k === N - 1 || !set[c + 1]) { ctx.moveTo(x1 - ins, y0); ctx.lineTo(x1 - ins, y1); }
+  });
+  ctx.stroke(); ctx.restore();
+}
+function unitLabel(u, color) { // small chip naming a highlighted row / column, outside the board where there is room
+  if (u.kind === 'reg') return;
+  var cs = G.cs, txt = (u.kind === 'row' ? 'row ' : 'col ') + (u.idx + 1), x, y;
+  ctx.save(); ctx.font = '800 10px system-ui,-apple-system,sans-serif'; var w = ctx.measureText(txt).width + 10, h = 16;
+  if (u.kind === 'col') { x = G.ox + (u.idx + .5) * cs - w / 2; y = G.oy - h - 5; }
+  else { x = G.ox > w + 6 ? G.ox - w - 4 : G.ox + 3; y = G.oy + u.idx * cs + 3; }
+  ctx.fillStyle = 'rgba(12,11,22,.92)'; rr(ctx, x, y, w, h, 8); ctx.fill(); ctx.strokeStyle = color; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, x + w / 2, y + h / 2 + .5); ctx.restore();
+}
+function drawHintUnder(now) {
+  var fx = hintFx, a = hintAlpha(now), pulse = .5 + .5 * Math.sin((now - fx.t0) / 1000 * 6);
+  if (a <= 0 && fx.committed && now - fx.tc > 3000) { hintFx = null; return; }
+  ctx.save(); ctx.globalAlpha = a;
+  fx.focusCells.forEach(function (c) { fillCell(c, 'rgba(255,214,130,' + (.1 + .06 * pulse).toFixed(3) + ')'); });
+  fx.shade.forEach(function (c) { fillCell(c, 'rgba(8,8,20,.5)'); var p = cellXY(c); ctx.fillStyle = 'rgba(235,228,210,.5)'; ctx.beginPath(); ctx.arc(p[0], p[1], G.cs * .06, 0, 7); ctx.fill(); });
+  fx.shadeStrong.forEach(function (c) { fillCell(c, 'rgba(8,8,20,.45)'); fillCell(c, 'rgba(255,90,110,' + (.22 + .12 * pulse).toFixed(3) + ')'); var p = cellXY(c);
+    if (fx.mode === 'elim') { if (!mark[c] || xT[c] > now) drawCross(p[0], p[1], G.cs, .28 + .12 * pulse, .8); } // squares about to be crossed out
+    else { ctx.fillStyle = 'rgba(255,200,205,.75)'; ctx.beginPath(); ctx.arc(p[0], p[1], G.cs * .07, 0, 7); ctx.fill(); } });
+  ctx.restore();
+}
+function drawHintOver(now) {
+  var fx = hintFx; if (!fx) return; var a = hintAlpha(now), pulse = .5 + .5 * Math.sin((now - fx.t0) / 1000 * 6), w = Math.max(2.5, G.cs * .07);
+  ctx.save(); ctx.globalAlpha = a;
+  fx.into.forEach(function (u) { outlineCells(u.cells, 'rgba(214,196,255,' + (.65 + .3 * pulse).toFixed(3) + ')', w, [G.cs * .16, G.cs * .12]); });
+  fx.focus.forEach(function (u) { outlineCells(u.cells, 'rgba(255,214,130,' + (.7 + .3 * pulse).toFixed(3) + ')', w); });
+  fx.empty.forEach(function (u) { outlineCells(u.cells, 'rgba(255,107,122,' + (.75 + .25 * pulse).toFixed(3) + ')', w + 1); });
+  fx.into.forEach(function (u) { unitLabel(u, '#d6c4ff'); }); fx.focus.forEach(function (u) { unitLabel(u, '#ffd27a'); }); fx.empty.forEach(function (u) { unitLabel(u, '#ff8a96'); });
+  fx.forced.forEach(function (c) { var p = cellXY(c); drawOwl(p[0], p[1], G.cs * .78, { alpha: .32, glow: .2 }); });
+  fx.ghost.forEach(function (c) { var p = cellXY(c);
+    var halo = ctx.createRadialGradient(p[0], p[1], 0, p[0], p[1], G.cs * .7); halo.addColorStop(0, 'rgba(255,214,130,' + (.28 + .14 * pulse).toFixed(3) + ')'); halo.addColorStop(1, 'rgba(255,214,130,0)');
+    ctx.fillStyle = halo; ctx.fillRect(p[0] - G.cs, p[1] - G.cs, G.cs * 2, G.cs * 2);
+    drawOwl(p[0], p[1] - G.cs * .03 * pulse, G.cs * .82, { alpha: fx.mode === 'place' ? .55 : .62, glow: .6 + .4 * pulse, look: [0, .2] }); });
+  fx.rings.forEach(function (c) { var p = cellXY(c); ctx.strokeStyle = 'rgba(255,225,150,' + (.6 + .4 * pulse).toFixed(3) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(p[0], p[1], G.cs * (.38 + .05 * pulse), 0, 7); ctx.stroke(); });
+  ctx.restore();
+}
 function cellXY(i) { return [G.ox + (i % N + .5) * G.cs, G.oy + (((i / N) | 0) + .5) * G.cs]; }
 var fireflies = [];
 for (var ff = 0; ff < 14; ff++) fireflies.push({ x: Math.random(), y: .3 + Math.random() * .7, p: Math.random() * 7, s: .4 + Math.random() * .6 });
@@ -746,18 +906,8 @@ function drawBoard(now, dt) {
     ctx.fillStyle = 'rgba(255,225,150,' + (0.07 * k).toFixed(3) + ')';
     var U = B.U[2 * n + g]; for (var j = 0; j < U.cells.length; j++) { var c = U.cells[j]; ctx.fillRect(G.ox + (c % n) * cs, G.oy + ((c / n) | 0) * cs, cs, cs); }
   }
-  // hint highlight
-  if (hintFx) {
-    var ht = (now - hintFx.t0) / 1000, pulse = .5 + .5 * Math.sin(ht * 6);
-    if (ht > 7) hintFx = null; else {
-      ctx.save(); ctx.globalAlpha = Math.min(1, ht * 4) * (ht > 6 ? 7 - ht : 1);
-      ctx.fillStyle = 'rgba(196,173,255,' + (.12 + .1 * pulse).toFixed(3) + ')';
-      hintFx.focus.forEach(function (c) { ctx.fillRect(G.ox + (c % n) * cs, G.oy + ((c / n) | 0) * cs, cs, cs); });
-      ctx.strokeStyle = 'rgba(255,225,150,' + (.6 + .4 * pulse).toFixed(3) + ')'; ctx.lineWidth = 3;
-      hintFx.targets.forEach(function (c) { var p = cellXY(c); ctx.beginPath(); ctx.arc(p[0], p[1], cs * (.36 + .05 * pulse), 0, 7); ctx.stroke(); });
-      ctx.restore();
-    }
-  }
+  // hint highlight (fills under the crosses)
+  if (hintFx) drawHintUnder(now);
   // cells
   var near = -1; if (pointer) near = pointer;
   for (var c2 = 0; c2 < NN; c2++) {
@@ -765,7 +915,7 @@ function drawBoard(now, dt) {
     if (shakeT[c2] && now - shakeT[c2] < 400) { var st2 = (now - shakeT[c2]) / 400; x += Math.sin(st2 * 40) * cs * .08 * (1 - st2); ctx.fillStyle = 'rgba(255,80,100,' + (.35 * (1 - st2)).toFixed(3) + ')'; ctx.fillRect(G.ox + (c2 % n) * cs, G.oy + ((c2 / n) | 0) * cs, cs, cs); }
     if (sc < .995) { ctx.fillStyle = 'rgba(0,0,0,' + ((1 - sc) * 1.6).toFixed(3) + ')'; ctx.fillRect(G.ox + (c2 % n) * cs + 1, G.oy + ((c2 / n) | 0) * cs + 1, cs - 2, cs - 2); }
     if (owl[c2]) continue;
-    if (mark[c2]) { var d = (now - xT[c2]) / 1000, s1 = 1 + .55 * Math.exp(-d * 13) * Math.cos(d * 32); drawCross(x, y, cs, Math.min(1, d * 25), s1 * sc); }
+    if (mark[c2]) { var d = (now - xT[c2]) / 1000, s1 = 1 + .55 * Math.exp(-d * 13) * Math.cos(d * 32); if (d >= 0) drawCross(x, y, cs, Math.min(1, d * 25), s1 * sc); }
     else if (xOffT[c2] && now - xOffT[c2] < 140) { var d2 = (now - xOffT[c2]) / 140; drawCross(x, y, cs, 1 - d2, (1 - d2 * .5) * sc); }
     else if (blocked[c2] && save.auto && now > autoT[c2]) {
       var d3 = Math.min(1, (now - autoT[c2]) / 160), s3 = d3 < 1 ? .6 + d3 * .55 : 1;
@@ -786,6 +936,7 @@ function drawBoard(now, dt) {
     var hop = won ? Math.max(0, Math.sin(Math.min(Math.PI, Math.max(0, ((now - winT) / 1000 - .12 * order(c3)) * 9)))) * cs * .18 : 0;
     drawOwl(p3[0], p3[1] + yo + cs * .02 - hop, cs * .86 * pS[c3], { sx: sxx, sy: syy, look: look, blink: bl, glow: glow, wing: hop ? .5 : 0 });
   }
+  if (hintFx) drawHintOver(now);
   // stroke trail
   if (stroke && stroke.trail.length > 1) {
     ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(239,232,214,.16)'; ctx.lineWidth = cs * .32;
@@ -806,7 +957,7 @@ function drawBoard(now, dt) {
     ctx.save(); ctx.shadowColor = 'rgba(196,173,255,.5)'; ctx.shadowBlur = 24; ctx.fillStyle = '#f4f0ff'; ctx.font = '800 ' + Math.round(H * .082) + 'px system-ui,sans-serif'; ctx.fillText('MOONROOST', tx, H * .5); ctx.restore();
     ctx.fillStyle = 'rgba(210,204,235,.75)'; ctx.font = '500 ' + Math.round(H * .036) + 'px system-ui,sans-serif';
     ['One owl per grove,', 'row and column.', 'Never wing to wing.'].forEach(function (l, k) { ctx.fillText(l, tx, H * (.59 + k * .06)); }); }
-  else { ctx.fillStyle = 'rgba(200,192,230,.55)'; ctx.font = '600 12px system-ui,-apple-system,sans-serif'; ctx.textAlign = 'center';
+  else if (!hintBarOn) { ctx.fillStyle = 'rgba(200,192,230,.55)'; ctx.font = '600 12px system-ui,-apple-system,sans-serif'; ctx.textAlign = 'center';
   ctx.fillText(owls + ' / ' + n + ' owls  ·  one per row, column and grove  ·  never touching', W / 2, G.oy + G.size + 26); }
   ctx.restore();
 }
@@ -862,6 +1013,7 @@ function tryOwl(c) {
   }
 }
 function win() {
+  commitHint(); hideHintBar();
   won = true; running = false; winT = performance.now() + 250; mode = 'won';
   orderMap = {}; SOL.slice().sort(function (a, b) { return a - b; }).forEach(function (c, k) { orderMap[c] = k; });
   SOL.forEach(function (c) { setTimeout(function () { burst(c, 's', 6); }, 250 + order(c) * 120); });
@@ -896,11 +1048,12 @@ function win() {
   }, 1300 + N * 120);
 }
 function undo() {
-  if (mode !== 'play' || won) return; var s = undoStack.pop(); if (!s) { toast('Nothing to undo.', 1200); return; }
+  if (mode !== 'play' || won) return; commitHint(); var s = undoStack.pop(); if (!s) { toast('Nothing to undo.', 1200); return; }
   for (var i = s.length - 1; i >= 0; i--) { var e = s[i]; if (!owl[e[0]]) { mark[e[0]] = e[1]; if (e[1]) xT[e[0]] = performance.now(); else xOffT[e[0]] = performance.now(); pV[e[0]] -= 3; } }
   sTick(.6, true); buzz(4);
 }
 function clearBoard() {
+  commitHint();
   var any = []; for (var i = 0; i < N * N; i++) if (mark[i] && !owl[i]) { any.push([i, 1, 0]); mark[i] = 0; xOffT[i] = performance.now() + Math.random() * 120; }
   if (any.length) undoStack.push(any); sTick(.5, true); buzz(8); toast('Crosses cleared. Your owls stay put.', 1600);
 }
@@ -928,8 +1081,38 @@ function showSong(kind, before) {
   if (kind === 'new') { nEl.textContent = before; setTimeout(function () { nEl.textContent = save.listen; nEl.classList.remove('pop'); void nEl.offsetWidth; nEl.classList.add('pop'); sChime(5); buzz(12); }, 900); }
   else nEl.textContent = save.listen;
 }
+var hintBarOn = false, hintBarT = 0, hintHoldT = 0;
+function groveWord(i) { return '<b class="gv" style="color:' + shade(GROVES[i % 10].c, .38) + '">' + COLOR_WORD[i % 10] + '</b>'; }
+function cellName(c) { return 'row ' + (((c / N) | 0) + 1) + ', column ' + (c % N + 1); }
+function showHintBar(html, ms) {
+  var el = $('hintbar'); el.innerHTML = html; $('toast').classList.remove('on');
+  // between the board and the dock; if the screen is too short, hug the dock instead
+  var top = G.oy + G.size + 10, dock = $('dock').getBoundingClientRect().top || H - 80;
+  el.style.top = '0px'; el.classList.add('on'); hintBarOn = true;
+  var h = el.offsetHeight; el.style.top = Math.round(Math.max(G.oy + 8, Math.min(top, dock - h - 10))) + 'px';
+  clearTimeout(hintBarT); hintBarT = setTimeout(function () { hideHintBar(); }, ms || 7000);
+}
+function hideHintBar(now) { var el = $('hintbar'); if (!el) return; el.classList.remove('on'); hintBarOn = false; clearTimeout(hintBarT); }
+function newHintFx(mode, d) {
+  d = d || {};
+  var fx = { t0: performance.now(), mode: mode, committed: false, tc: 0, ghost: d.ghost || [], forced: d.forced || [], shade: d.shade || [], shadeStrong: d.shadeStrong || [],
+    focus: d.focus || [], into: d.into || [], empty: d.empty || [], targets: d.targets || [], rings: d.rings || [], elim: d.elim || [], focusCells: [] };
+  if (mode === 'elim') fx.focus.forEach(function (u) { u.cells.forEach(function (c) { if (!owl[c] && !mark[c] && fx.elim.indexOf(c) < 0 && !blocked[c]) fx.focusCells.push(c); }); });
+  return fx;
+}
+// Commit the pending hint: cross out the squares it explained (after the hold, or on the next tap / button).
+function commitHint() {
+  var fx = hintFx; clearTimeout(hintHoldT);
+  if (!fx || fx.committed) return false;
+  fx.committed = true; fx.tc = performance.now();
+  var applied = [], k = 0;
+  fx.elim.forEach(function (e) { if (!mark[e] && !owl[e]) { applied.push([e, 0, 1]); setMark(e, 1, k > 0, k); xT[e] = performance.now() + k * 55; k++; } });
+  if (applied.length) undoStack.push(applied);
+  return true;
+}
 function hint() {
   if (mode !== 'play' || won) return;
+  commitHint();
   if (save.listen <= 0) {
     sTick(.55, true); buzz([6, 40, 6]); renderListen(true);
     toast('Listen is quiet for now. Settle a grove <b>flawlessly</b>, with no lost moons and no hints, to learn a new song: <b>+1 Listen</b>. Every grove gives way to logic alone, so you never need to guess.', 5200);
@@ -938,31 +1121,27 @@ function hint() {
   startClock();
   // 1) crosses covering a needed perch
   for (var i = 0; i < N * N; i++) if (mark[i] && solSet[i] && !owl[i]) {
-    hints++; spendListen(); mark[i] = 0; xOffT[i] = performance.now(); hintFx = { t0: performance.now(), focus: [i], targets: [i] }; sHint(); buzz(10);
-    toast('That cross was covering a perch an owl <b>needs</b>. I cleared it.', 3400); return;
+    hints++; spendListen(); mark[i] = 0; xOffT[i] = performance.now(); sHint(); buzz(10);
+    hintFx = newHintFx('fix', { rings: [i], targets: [i] }); hintFx.committed = true; hintFx.tc = performance.now();
+    showHintBar('Your cross in ' + cellName(i) + ' was covering a square an owl <b>needs</b>. I cleared it.', 5000); return;
   }
   var st = new RL.State(B);
   for (var c = 0; c < N * N; c++) if (owl[c]) st.place(c);
   for (var c2 = 0; c2 < N * N; c2++) if (mark[c2]) st.cand[c2] = 0;
-  // unmarked cells that are blocked by owls (auto-cross off): nudge first
   var s = RL.next(st, 10); if (!s || s.tech === 'dead') { toast('Listen closely. Land the owls you are sure of first.', 2400); return; }
   hints++; spendListen(); sHint(); buzz(10);
-  var cellsOf = function (us) { var o = []; us.forEach(function (u) { o = o.concat(u.cells); }); return o; };
-  var msg;
-  if (s.tech === 'single') { hintFx = { t0: performance.now(), focus: s.focus[0].cells.slice(), targets: [s.place] }; msg = 'Only one open perch is left in ' + uname(s.focus[0]) + '. <b>Double-tap</b> it.'; }
-  else {
-    var applied = [];
-    s.elim.forEach(function (e, k) { if (!mark[e]) { applied.push([e, 0, 1]); (function (e, k) { setTimeout(function () { setMark(e, 1, false, k); }, 260 + k * 70); })(e, k); } });
-    if (applied.length) undoStack.push(applied);
-    var groups = s.focus.map(uname), into = (s.into || []).map(uname);
-    if (s.tech === 'confine1') { msg = 'Every open perch in ' + groups[0] + ' lies in ' + into[0] + ', so its owl will take that line. Crossing out the rest of ' + into[0] + '.';
-      hintFx = { t0: performance.now(), focus: cellsOf(s.focus), targets: s.elim.slice() }; }
-    else if (s.tech === 'confine2' || s.tech === 'confine3') { msg = groups.join(' and ') + ' only reach ' + into.join(' and ') + '. Together they claim every owl there, so the other perches in those lines go.';
-      hintFx = { t0: performance.now(), focus: cellsOf(s.focus), targets: s.elim.slice() }; }
-    else if (s.tech === 'crowd') { msg = 'An owl here would leave ' + groups[0] + ' with nowhere to perch.'; hintFx = { t0: performance.now(), focus: cellsOf(s.focus), targets: s.elim.slice() }; }
-    else { msg = 'If an owl landed here, the forced owls that follow would run out of room. Crossing it out.'; hintFx = { t0: performance.now(), focus: [], targets: s.elim.slice() }; }
+  var d = RL.describe(st, s, { reg: groveWord });
+  if (s.tech === 'single') {
+    hintFx = newHintFx('place', { ghost: d.ghost, focus: d.focus, targets: d.targets, rings: d.targets });
+    hintFx.committed = true; hintFx.tc = performance.now() + HINT_HOLD; // nothing to cross out; just fades after a while
+    showHintBar(d.text, 7000);
+  } else {
+    hintFx = newHintFx(s.tech === 'crowd' || s.tech === 'chain' ? 'whatif' : 'elim',
+      { ghost: d.ghost, forced: d.forced, shade: d.shade, shadeStrong: d.shadeStrong, focus: d.focus, into: d.into, empty: d.empty, targets: d.targets, elim: s.elim.slice() });
+    var fx = hintFx; hintHoldT = setTimeout(function () { if (hintFx === fx) commitHint(); }, HINT_HOLD);
+    showHintBar(d.text, HINT_HOLD + 3400);
   }
-  toast(msg, 5200);
+  if (window.__hintLog) window.__hintLog.push({ tech: s.tech, text: d.text, ghost: d.ghost, shade: d.shade.length + d.shadeStrong.length, units: d.focus.length + d.into.length + d.empty.length, targets: d.targets });
 }
 
 /* ---------- input ---------- */
@@ -972,6 +1151,8 @@ cv.addEventListener('pointerdown', function (e) {
   if (mode !== 'play' || won) return; e.preventDefault(); audio();
   if (stroke) return; // single-finger strokes
   var c = cellAt(e.clientX, e.clientY); pointer = { x: e.clientX, y: e.clientY };
+  // a tap during a Listen explanation commits it; a tap on one of the squares it just crossed out is used up by that
+  if (hintFx && !hintFx.committed && hintFx.elim.length) { commitHint(); if (c < 0 || hintFx.elim.indexOf(c) >= 0) { lastTap = null; return; } }
   if (c < 0) return;
   try { cv.setPointerCapture(e.pointerId); } catch (er) {}
   var now = performance.now();
@@ -1032,7 +1213,7 @@ cv.addEventListener('contextmenu', function (e) { e.preventDefault(); var c = ce
 
 /* ---------- UI ---------- */
 var toastTimer = 0;
-function toast(html, ms) { var t = $('toast'); t.innerHTML = html; t.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('on'); }, ms || 2000); }
+function toast(html, ms) { hideHintBar(); var t = $('toast'); t.innerHTML = html; t.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('on'); }, ms || 2000); }
 function campDone() { return Object.keys(save.best).filter(function (k) { return /^\d+$/.test(k); }).length; }
 function buildLevels() {
   var g = $('lvGrid'), h = '';
@@ -1071,7 +1252,7 @@ $('bDaily').onclick = function () { audio(); sTick(1); var b = $('bDaily'), k = 
     startSpec(sp); b.disabled = false; refreshTitle(); }, 40); };
 $('bLevels').onclick = function () { audio(); sTick(1); buildLevels(); setMode('levels'); };
 $('bLvBack').onclick = function () { refreshTitle(); setMode('title'); };
-$('hudMenu').onclick = function () { if (mode !== 'play') return; running = false; setMode('pause'); syncToggles(); };
+$('hudMenu').onclick = function () { if (mode !== 'play') return; commitHint(); hideHintBar(); running = false; setMode('pause'); syncToggles(); };
 $('bResume').onclick = function () { setMode('play'); if (started && !won) running = true; };
 $('bPRestart').onclick = function () { startSpec(SP); };
 $('bPHow').onclick = function () { showHow('pause'); };
@@ -1122,7 +1303,7 @@ window.__game = {
   get mode() { return mode; }, get G() { return G; }, get N() { return N; }, get SOL() { return SOL; }, get owls() { return owls; }, get moons() { return moons; },
   get mark() { return mark; }, get owl() { return owl; }, get hints() { return hints; }, get listen() { return save.listen; }, LISTEN_CAP: LISTEN_CAP,
   setListen: function (v) { save.listen = Math.max(0, v | 0); writeSave(); renderListen(); }, get elapsed() { return elapsed; }, get undoDepth() { return undoStack.length; }, get SP() { return SP; },
-  LEVELS: LEVELS, RL: RL, spec: spec, startSpec: startSpec, hint: hint, undo: undo,
+  LEVELS: LEVELS, RL: RL, spec: spec, startSpec: startSpec, hint: hint, undo: undo, commitHint: commitHint, get hintFx() { return hintFx; },
   cellCenter: function (i) { return cellXY(i); },
   unlockAll: function () { save.unlocked = CAMPAIGN + 1; writeSave(); }
 };
