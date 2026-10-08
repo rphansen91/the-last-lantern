@@ -1,7 +1,7 @@
 /* Night Arcade — service worker.
    Caches the shell + catalog + listed game shells so the library works offline.
    Bump VERSION when shipping shell or catalog changes. */
-const VERSION = 'night-arcade-v7';
+const VERSION = 'night-arcade-v8';
 const SHELL = [
   './',
   './index.html',
@@ -44,7 +44,11 @@ const SHELL = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // cache:'reload' bypasses the HTTP cache so a new version never precaches stale files
+  e.waitUntil(caches.open(VERSION)
+    .then(c => Promise.all(SHELL.map(u => fetch(new Request(u, { cache: 'reload' }))
+      .then(r => r.ok ? c.put(new URL(u, self.location).href.split('?')[0], r) : null).catch(() => null))))
+    .then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(
@@ -52,20 +56,22 @@ self.addEventListener('activate', e => {
       .then(() => self.clients.claim())
   );
 });
+// Network-first for pages, code and data (always fresh when online); cache-first for images.
+function isFreshFirst(req, url) {
+  return req.mode === 'navigate' || /\.(html|css|js|json|webmanifest)$/.test(url.pathname) || url.pathname.endsWith('/');
+}
 self.addEventListener('fetch', e => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== self.location.origin) return;
   const key = url.origin + url.pathname;
-  const refresh = fetch(req).then(res => {
-    if (res && res.ok && res.type === 'basic') {
-      const copy = res.clone();
-      caches.open(VERSION).then(c => c.put(key, copy));
-    }
+  const save = res => {
+    if (res && res.ok && res.type === 'basic') { const copy = res.clone(); caches.open(VERSION).then(c => c.put(key, copy)); }
     return res;
-  });
-  e.respondWith(
-    caches.match(key).then(hit => hit || refresh.catch(() =>
-      req.mode === 'navigate' ? caches.match('./index.html') : Response.error()))
-  );
-  e.waitUntil(refresh.then(() => {}, () => {}));
+  };
+  if (isFreshFirst(req, url)) {
+    e.respondWith(fetch(req, { cache: 'no-cache' }).then(save).catch(() =>
+      caches.match(key).then(hit => hit || (req.mode === 'navigate' ? caches.match(new URL('./index.html', self.location).href) : Response.error()))));
+    return;
+  }
+  e.respondWith(caches.match(key).then(hit => hit || fetch(req).then(save)));
 });

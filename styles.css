@@ -81,7 +81,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   padding: 0; display: flex; flex-direction: column;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   transition: border-color 0.2s, transform 0.15s;
-  width: 100%;
+  width: 100%; cursor: pointer; -webkit-tap-highlight-color: transparent; color: inherit; font: inherit;
 }
 .card:active { transform: scale(0.985); }
 .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

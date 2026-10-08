@@ -22,8 +22,10 @@
   }
 
   function cardFor(game) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
+    // A div, not a <button>: iOS Safari mis-sizes block children inside flex buttons.
+    const btn = document.createElement('div');
+    btn.setAttribute('role', 'button');
+    btn.tabIndex = 0;
     btn.className = 'card';
     btn.setAttribute('aria-label', game.title + ' — open details');
     const cover = document.createElement('div');
@@ -44,6 +46,7 @@
     body.append(h2, blurb, tags);
     btn.append(cover, body);
     btn.addEventListener('click', () => openSheet(game));
+    btn.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openSheet(game); } });
     return btn;
   }
 
