@@ -86,7 +86,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .card:active { transform: scale(0.985); }
 .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .card .cover {
-  aspect-ratio: 16 / 10; background: #000 center/cover no-repeat;
+  /* padding-based ratio: iOS Safari collapses aspect-ratio inside a flex <button> */
+  display: block; width: 100%; height: 0; padding-top: 62.5%; flex: 0 0 auto;
+  background: #000 center/cover no-repeat;
   position: relative; isolation: isolate;
 }
 .card .cover::after {
@@ -147,7 +149,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   margin: 4px auto 6px;
 }
 .sheet .hero {
-  aspect-ratio: 16 / 9; border-radius: 14px; background: #000 center/cover no-repeat;
+  width: 100%; height: 0; padding-top: 56.25%; border-radius: 14px; background: #000 center/cover no-repeat;
   border: 1px solid var(--line); flex-shrink: 0;
 }
 .sheet .meta { display: flex; flex-direction: column; gap: 8px; }
