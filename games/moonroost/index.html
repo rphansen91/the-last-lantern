@@ -79,6 +79,28 @@ body[data-mode=play] #dock{display:flex}
 .tool:active{transform:translateY(3px);box-shadow:0 1px 0 #0b0a14}
 .tool svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .tool.off{opacity:.35}
+/* Listen charges ("songs") */
+.tool .chg{position:absolute;top:-8px;right:-8px;min-width:21px;height:21px;padding:0 6px;border-radius:999px;background:linear-gradient(180deg,#ffe6aa,#efb453);color:#2a1a05;
+  font:800 11px/21px system-ui,-apple-system,sans-serif;letter-spacing:0;text-align:center;box-shadow:0 0 0 2px #090b14,0 0 14px rgba(255,210,122,.45);font-variant-numeric:tabular-nums}
+.tool.empty{color:#7d7894;border-style:dashed}
+.tool.empty svg{opacity:.45}
+.tool.empty .chg{background:#24223a;color:#8e8aa6;box-shadow:0 0 0 2px #090b14}
+.chg.pop{animation:chgPop .55s cubic-bezier(.2,1.6,.4,1)}
+@keyframes chgPop{0%{transform:scale(1)}35%{transform:scale(1.55)}100%{transform:scale(1)}}
+.song{position:relative;display:inline-flex;align-items:center;gap:11px;margin:.1em 0 1.15em;padding:9px 16px 9px 10px;border-radius:15px;border:1px solid rgba(196,173,255,.45);
+  background:linear-gradient(180deg,rgba(40,32,70,.85),rgba(22,18,40,.85));color:#e9e4f6;font-size:13px;letter-spacing:.03em;text-align:left;line-height:1.35}
+.song.hidden{display:none}
+.song .ear{position:relative;flex:0 0 40px;width:40px;height:36px;border-radius:11px;border:1px solid #33304a;background:rgba(18,17,30,.95);display:flex;align-items:center;justify-content:center}
+.song .ear svg{width:20px;height:20px;stroke:#d4cee6;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.song .ear .chg{position:absolute;top:-8px;right:-9px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:linear-gradient(180deg,#ffe6aa,#efb453);color:#2a1a05;
+  font:800 11px/20px system-ui,-apple-system,sans-serif;text-align:center;box-shadow:0 0 0 2px #0d0c18,0 0 14px rgba(255,210,122,.45)}
+.song b{color:var(--gold)}
+.song small{display:block;color:var(--dim);font-size:11px;letter-spacing:.02em;margin-top:2px}
+.song.new{border-color:rgba(255,210,122,.6);box-shadow:0 0 28px rgba(255,210,122,.16);animation:songIn .8s cubic-bezier(.2,1.4,.4,1) .3s both}
+@keyframes songIn{0%{opacity:0;transform:translateY(10px) scale(.92)}100%{opacity:1;transform:none}}
+.song .rise{position:absolute;left:22px;top:-4px;color:var(--gold);font-weight:800;font-size:15px;pointer-events:none;opacity:0;text-shadow:0 0 12px rgba(255,210,122,.6)}
+.song.new .rise{animation:rise 1.5s ease-out .75s both}
+@keyframes rise{0%{opacity:0;transform:translateY(6px)}20%{opacity:1}100%{opacity:0;transform:translateY(-34px)}}
 #toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);z-index:6;width:max-content;max-width:min(340px,90vw);
   background:rgba(16,14,28,.95);border:1px solid rgba(196,173,255,.42);border-radius:14px;padding:11px 15px;font-size:13px;line-height:1.45;color:#e9e4f6;
   text-align:center;opacity:0;transition:opacity .35s,transform .35s;pointer-events:none}
@@ -106,7 +128,7 @@ body[data-mode=play] #dock{display:flex}
 </div>
 <div id="dock">
   <button class="tool" id="tUndo" type="button" aria-label="Undo last cross"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>Undo</button>
-  <button class="tool" id="tHint" type="button" aria-label="Listen for a hint"><svg viewBox="0 0 24 24"><path d="M6 15a6 6 0 1 1 10.5 4c-1 1-1.5 2-1.5 3"/><path d="M9.5 12a2.5 2.5 0 1 1 4 2"/><path d="M19 3c1.5 1.5 2.3 3.4 2.3 5.5M17 5.5c.8.8 1.2 1.8 1.2 2.9"/></svg>Listen</button>
+  <button class="tool" id="tHint" type="button" aria-label="Listen for a hint"><svg viewBox="0 0 24 24"><path d="M6 15a6 6 0 1 1 10.5 4c-1 1-1.5 2-1.5 3"/><path d="M9.5 12a2.5 2.5 0 1 1 4 2"/><path d="M19 3c1.5 1.5 2.3 3.4 2.3 5.5M17 5.5c.8.8 1.2 1.8 1.2 2.9"/></svg>Listen<span class="chg" id="hintN">3</span></button>
   <button class="tool" id="tRestart" type="button" aria-label="Clear the grove"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Clear</button>
 </div>
 <div id="toast"></div>
@@ -131,7 +153,8 @@ body[data-mode=play] #dock{display:flex}
     <li><svg viewBox="0 0 30 30"><rect x="2" y="11" width="26" height="8" rx="3" fill="#3d6b8f"/><rect x="11" y="2" width="8" height="26" rx="3" fill="#3d6b8f" opacity=".7"/><circle cx="15" cy="15" r="4" fill="#141822"/></svg><span>Every <b>row</b> and every <b>column</b> holds exactly one owl.</span></li>
     <li><svg viewBox="0 0 30 30"><rect x="2" y="2" width="26" height="26" rx="5" fill="#a35a74" opacity=".55"/><circle cx="15" cy="15" r="4.5" fill="#141822"/><path d="M5 5l4 4M25 5l-4 4M5 25l4-4M25 25l-4-4" stroke="#e8e2d0" stroke-width="2" stroke-linecap="round"/></svg><span>Owls <b>never touch</b>, not side by side and not at a corner.</span></li>
     <li><svg viewBox="0 0 30 30"><rect x="2" y="2" width="26" height="26" rx="5" fill="#26243a"/><path d="M10 10l10 10M20 10L10 20" stroke="#e8e2d0" stroke-width="2.4" stroke-linecap="round"/></svg><span><b>Tap</b> a branch to cross it out, or <b>drag</b> to cross out a whole line. Tap a cross to clear it.</span></li>
-    <li><svg viewBox="0 0 30 30"><rect x="2" y="2" width="26" height="26" rx="5" fill="#26243a"/><circle cx="15" cy="16" r="7" fill="#141822"/><circle cx="12.4" cy="14.5" r="2.4" fill="#ffd27a"/><circle cx="17.6" cy="14.5" r="2.4" fill="#ffd27a"/></svg><span><b>Double-tap</b> to land an owl. A wrong perch costs a <b>moon</b>, and you have three per grove. Every grove can be solved without guessing, so <b>Listen</b> if you get stuck.</span></li>
+    <li><svg viewBox="0 0 30 30"><rect x="2" y="2" width="26" height="26" rx="5" fill="#26243a"/><circle cx="15" cy="16" r="7" fill="#141822"/><circle cx="12.4" cy="14.5" r="2.4" fill="#ffd27a"/><circle cx="17.6" cy="14.5" r="2.4" fill="#ffd27a"/></svg><span><b>Double-tap</b> to land an owl. A wrong perch costs a <b>moon</b>, and you have three per grove. Every grove can be solved by logic alone, never by guessing.</span></li>
+    <li><svg viewBox="0 0 30 30"><rect x="2" y="2" width="26" height="26" rx="6" fill="#16152a" stroke="#4d4a66"/><path d="M9 18a6 6 0 1 1 10.5 4" stroke="#d4cee6" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="23" cy="7" r="5" fill="#ffd27a"/><text x="23" y="9.6" font-size="7" font-weight="800" text-anchor="middle" fill="#2a1a05" font-family="system-ui">3</text></svg><span><b>Listen</b> reveals the next logical step and spends one <b>song</b>. You start with <b>3</b> and can hold up to <b>9</b>. Settle a grove <b>flawlessly</b> (no lost moons, no hints) to learn a new song: <b>+1 Listen</b>, once per grove.</span></li>
   </ul>
   <button class="btn" id="bHowOk" type="button">Got it</button>
 </div>
@@ -164,6 +187,7 @@ body[data-mode=play] #dock{display:flex}
   <h2 id="winTitle">All owls roosting</h2>
   <p class="stat">Time <b id="winTime">0:00</b> · Best <b id="winBest">0:00</b><br>Moons kept <b id="winMoons">3</b> · Hints <b id="winHints">0</b></p>
   <div class="badge hidden" id="winFlaw">✦ Silent wings · flawless</div>
+  <div class="song hidden" id="winSong"><span class="ear"><svg viewBox="0 0 24 24"><path d="M6 15a6 6 0 1 1 10.5 4c-1 1-1.5 2-1.5 3"/><path d="M9.5 12a2.5 2.5 0 1 1 4 2"/><path d="M19 3c1.5 1.5 2.3 3.4 2.3 5.5M17 5.5c.8.8 1.2 1.8 1.2 2.9"/></svg><span class="chg" id="winSongN">0</span></span><span id="winSongTxt"></span><span class="rise">+1</span></div>
   <button class="btn" id="bNext" type="button">Next grove</button>
   <div class="row"><button class="ghost" id="bWinReplay" type="button">Replay</button><button class="ghost" id="bWinMenu" type="button">Groves</button></div>
 </div>
@@ -429,11 +453,16 @@ var GROVES = [
 var CAMPAIGN = LEVELS.length, COVER = /\bcover=1\b/.test(location.search || '');
 if (COVER) document.documentElement.classList.add('cover');
 var SAVE_KEY = 'moonroost-v1';
+// Listen charges ("songs"): everyone starts with LISTEN_START (older saves without the field are migrated to it), max LISTEN_CAP.
+// +1 for the first flawless clear of each campaign grove / deep-wood board (tracked by save.flaw) and once per nightly date (save.daily.song).
+var LISTEN_START = 3, LISTEN_CAP = 9;
+function clampListen(v) { v = Math.floor(+v); return isFinite(v) ? Math.max(0, Math.min(LISTEN_CAP, v)) : LISTEN_START; }
 function readSave() {
   try { var o = JSON.parse(localStorage.getItem(SAVE_KEY) || '{}');
     return { unlocked: o.unlocked || 1, best: o.best || {}, flaw: o.flaw || {}, sound: o.sound !== false, auto: o.auto !== false, seenHow: !!o.seenHow,
-      daily: o.daily || { last: '', streak: 0, best: {} }, cur: o.cur || 0 };
-  } catch (e) { return { unlocked: 1, best: {}, flaw: {}, sound: true, auto: true, seenHow: false, daily: { last: '', streak: 0, best: {} }, cur: 0 }; }
+      daily: o.daily || { last: '', streak: 0, best: {} }, cur: o.cur || 0, deep: o.deep || 0,
+      listen: typeof o.listen === 'number' ? clampListen(o.listen) : LISTEN_START };
+  } catch (e) { return { unlocked: 1, best: {}, flaw: {}, sound: true, auto: true, seenHow: false, daily: { last: '', streak: 0, best: {} }, cur: 0, deep: 0, listen: LISTEN_START }; }
 }
 var save = readSave();
 function writeSave() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
@@ -535,7 +564,7 @@ function startSpec(sp) {
   moons = 3; revived = false; hints = 0; mistakes = 0; owls = 0; elapsed = 0; running = false; started = false; won = false;
   undoStack = []; particles = []; ghosts = []; hintFx = null; boardShake = 0; winT = 0; lastTap = null; stroke = null;
   if (sp.kind === 'camp') { save.cur = sp.idx; writeSave(); }
-  $('hudLv').textContent = sp.label; renderMoons(); $('timer').textContent = '0:00';
+  $('hudLv').textContent = sp.label; renderMoons(); renderListen(); $('timer').textContent = '0:00';
   setMode('play'); layout();
   if (sp.kind === 'camp' && sp.idx === 0) setTimeout(function () { toast('<b>Tap</b> to cross out a branch. <b>Double-tap</b> to land an owl.', 4200); }, 500);
   else if (sp.kind === 'camp' && sp.idx === 1) setTimeout(function () { toast('<b>Drag</b> across branches to cross out a whole line at once.', 3600); }, 500);
@@ -842,6 +871,13 @@ function win() {
   var key = bestKey(SP), t = Math.max(1, Math.round(elapsed)), flaw = mistakes === 0 && hints === 0;
   var store = SP.kind === 'night' ? save.daily.best : save.best;
   var prev = store[key]; if (!prev || t < prev) store[key] = t;
+  // Listen songs: first flawless clear of this grove/board (or tonight's date) earns +1, up to the cap
+  var song = '', listenBefore = save.listen;
+  if (flaw) {
+    var fresh = SP.kind === 'night' ? save.daily.song !== SP.idx : !save.flaw[key];
+    if (fresh) { if (save.listen < LISTEN_CAP) { save.listen++; song = 'new'; } else song = 'full'; if (SP.kind === 'night') save.daily.song = SP.idx; }
+    else song = 'known';
+  } else if (save.listen <= 0) song = 'hint';
   if (SP.kind === 'camp') { if (SP.idx + 2 > save.unlocked) save.unlocked = Math.min(CAMPAIGN + 1, SP.idx + 2); if (flaw) save.flaw[key] = 1; }
   if (SP.kind === 'night') {
     var d = save.daily; if (d.last !== SP.idx) { var y = new Date(SP.idx + 'T12:00:00'); y.setDate(y.getDate() - 1); d.streak = d.last === todayKey(y) ? d.streak + 1 : 1; d.last = SP.idx; }
@@ -854,6 +890,7 @@ function win() {
     $('winTitle').textContent = flaw ? 'Not a feather out of place' : ['All owls roosting', 'The grove is hushed', 'Every perch taken'][Math.floor(Math.random() * 3)];
     $('winTime').textContent = fmt(t); $('winBest').textContent = fmt(store[key]); $('winMoons').textContent = moons; $('winHints').textContent = hints;
     $('winFlaw').classList.toggle('hidden', !flaw);
+    showSong(song, listenBefore);
     $('bNext').textContent = SP.kind === 'night' ? 'Back to the wood' : 'Next grove';
     setMode('win');
   }, 1300 + N * 120);
@@ -870,11 +907,38 @@ function clearBoard() {
 
 /* ---------- hints ---------- */
 function uname(u) { return u.kind === 'row' ? 'row ' + (u.idx + 1) : u.kind === 'col' ? 'column ' + (u.idx + 1) : 'the <b>' + GROVES[u.idx % 10].name + '</b> grove'; }
+function renderListen(pop) {
+  var n = save.listen, b = $('tHint'), c = $('hintN');
+  c.textContent = n; b.classList.toggle('empty', n <= 0);
+  b.setAttribute('aria-label', n > 0 ? 'Listen for a hint, ' + n + (n === 1 ? ' song' : ' songs') + ' left' : 'Listen is quiet: settle a grove flawlessly to earn a song');
+  if (pop) { c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); }
+}
+function spendListen() { save.listen = Math.max(0, save.listen - 1); writeSave(); renderListen(true); }
+var SONG_TXT = {
+  'new': function () { return 'A new song · <b>+1 Listen</b><small>' + (save.listen >= LISTEN_CAP ? 'Your ears are full: ' + LISTEN_CAP + ' songs' : save.listen + ' of ' + LISTEN_CAP + ' songs') + '</small>'; },
+  full: function () { return 'A new song, but your ears are full<small>' + LISTEN_CAP + ' of ' + LISTEN_CAP + ' songs. Spend one, then earn more.</small>'; },
+  known: function () { return (SP.kind === 'night' ? "Tonight's song is already yours" : 'You already know this grove\'s song') + '<small>' + save.listen + ' of ' + LISTEN_CAP + ' songs</small>'; },
+  hint: function () { return 'Listen is quiet<small>Settle a grove with no lost moons and no hints to earn +1.</small>'; }
+};
+function showSong(kind, before) {
+  var el = $('winSong'), nEl = $('winSongN');
+  el.className = 'song' + (kind ? '' : ' hidden') + (kind === 'new' ? ' new' : '');
+  if (!kind) return;
+  $('winSongTxt').innerHTML = SONG_TXT[kind]();
+  if (kind === 'new') { nEl.textContent = before; setTimeout(function () { nEl.textContent = save.listen; nEl.classList.remove('pop'); void nEl.offsetWidth; nEl.classList.add('pop'); sChime(5); buzz(12); }, 900); }
+  else nEl.textContent = save.listen;
+}
 function hint() {
-  if (mode !== 'play' || won) return; startClock();
+  if (mode !== 'play' || won) return;
+  if (save.listen <= 0) {
+    sTick(.55, true); buzz([6, 40, 6]); renderListen(true);
+    toast('Listen is quiet for now. Settle a grove <b>flawlessly</b>, with no lost moons and no hints, to learn a new song: <b>+1 Listen</b>. Every grove gives way to logic alone, so you never need to guess.', 5200);
+    return;
+  }
+  startClock();
   // 1) crosses covering a needed perch
   for (var i = 0; i < N * N; i++) if (mark[i] && solSet[i] && !owl[i]) {
-    hints++; mark[i] = 0; xOffT[i] = performance.now(); hintFx = { t0: performance.now(), focus: [i], targets: [i] }; sHint(); buzz(10);
+    hints++; spendListen(); mark[i] = 0; xOffT[i] = performance.now(); hintFx = { t0: performance.now(), focus: [i], targets: [i] }; sHint(); buzz(10);
     toast('That cross was covering a perch an owl <b>needs</b>. I cleared it.', 3400); return;
   }
   var st = new RL.State(B);
@@ -882,7 +946,7 @@ function hint() {
   for (var c2 = 0; c2 < N * N; c2++) if (mark[c2]) st.cand[c2] = 0;
   // unmarked cells that are blocked by owls (auto-cross off): nudge first
   var s = RL.next(st, 10); if (!s || s.tech === 'dead') { toast('Listen closely. Land the owls you are sure of first.', 2400); return; }
-  hints++; sHint(); buzz(10);
+  hints++; spendListen(); sHint(); buzz(10);
   var cellsOf = function (us) { var o = []; us.forEach(function (u) { o = o.concat(u.cells); }); return o; };
   var msg;
   if (s.tech === 'single') { hintFx = { t0: performance.now(), focus: s.focus[0].cells.slice(), targets: [s.place] }; msg = 'Only one open perch is left in ' + uname(s.focus[0]) + '. <b>Double-tap</b> it.'; }
@@ -1032,7 +1096,7 @@ addEventListener('keydown', function (e) {
 });
 document.addEventListener('visibilitychange', function () { if (document.hidden && mode === 'play' && !won) $('hudMenu').click(); });
 addEventListener('resize', resize);
-refreshTitle(); resize(); requestAnimationFrame(frame);
+refreshTitle(); renderListen(); resize(); requestAnimationFrame(frame);
 
 /* ---------- Night Arcade back-chip ---------- */
 (function () {
@@ -1056,7 +1120,8 @@ if (/^https?:$/.test(location.protocol)) {
 /* debug / test hooks */
 window.__game = {
   get mode() { return mode; }, get G() { return G; }, get N() { return N; }, get SOL() { return SOL; }, get owls() { return owls; }, get moons() { return moons; },
-  get mark() { return mark; }, get owl() { return owl; }, get hints() { return hints; }, get elapsed() { return elapsed; }, get undoDepth() { return undoStack.length; }, get SP() { return SP; },
+  get mark() { return mark; }, get owl() { return owl; }, get hints() { return hints; }, get listen() { return save.listen; }, LISTEN_CAP: LISTEN_CAP,
+  setListen: function (v) { save.listen = Math.max(0, v | 0); writeSave(); renderListen(); }, get elapsed() { return elapsed; }, get undoDepth() { return undoStack.length; }, get SP() { return SP; },
   LEVELS: LEVELS, RL: RL, spec: spec, startSpec: startSpec, hint: hint, undo: undo,
   cellCenter: function (i) { return cellXY(i); },
   unlockAll: function () { save.unlocked = CAMPAIGN + 1; writeSave(); }

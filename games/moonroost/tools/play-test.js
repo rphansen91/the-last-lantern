@@ -18,7 +18,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const tap = async (x, y) => { await touch('touchStart', x, y); await sleep(25); await touch('touchEnd'); };
   let ok = true;
   for (const lv of LV) {
-    await page.evaluate(i => { window.__game.unlockAll(); window.__game.startSpec(window.__game.spec('camp', i)); }, lv - 1); await sleep(400);
+    await page.evaluate(i => { window.__game.setListen(50); window.__game.unlockAll(); window.__game.startSpec(window.__game.spec('camp', i)); }, lv - 1); await sleep(400);
     const info = await page.evaluate(() => { const g = window.__game; return { N: g.N, SOL: g.SOL, cc: Array.from({ length: g.N * g.N }, (_, i) => g.cellCenter(i)), cs: g.G.cs }; });
     const { N, SOL, cc } = info; const sol = new Set(SOL); const notes = [];
     // 1) drag-paint a full row that has no... (row 0) then undo it
@@ -58,7 +58,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   }
   // extra scenarios on grove 5: slow taps are two crosses (no owl), 3 wrong owls -> fail -> revive, Library chip, daily + deep wood
   {
-    await page.evaluate(() => window.__game.startSpec(window.__game.spec('camp', 4))); await sleep(300);
+    await page.evaluate(() => { window.__game.setListen(50); window.__game.startSpec(window.__game.spec('camp', 4)); }); await sleep(300);
     const { N, SOL, cc } = await page.evaluate(() => { const g = window.__game; return { N: g.N, SOL: g.SOL, cc: Array.from({ length: g.N * g.N }, (_, i) => g.cellCenter(i)) }; });
     const s0 = SOL[0], notes = [];
     await tap(cc[s0][0], cc[s0][1]); await sleep(520); await tap(cc[s0][0], cc[s0][1]); await sleep(300);

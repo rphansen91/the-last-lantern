@@ -19,7 +19,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   // a couple of manual crosses
   const free = await page.evaluate(() => { const g = window.__game, o = []; for (let i = 0; i < g.N * g.N; i++) if (!g.owl[i] && !g.SOL.includes(i)) o.push(i); return o; });
   for (const c of free.slice(0, 3)) { await tap(cc[c][0], cc[c][1]); await sleep(380); }
-  await page.evaluate(() => window.__game.hint()); await sleep(1500);
+  await page.evaluate(() => { window.__game.setListen(Math.max(window.__game.listen, 3)); window.__game.hint(); }); await sleep(1500);
   await page.screenshot({ path: OUT + '/play.png' });
   // catalog cover: same renderer in a 16:10 viewport (?cover=1 hides the HUD and places the board right of the title)
   await page.setViewport({ width: 512, height: 320, deviceScaleFactor: 2 });

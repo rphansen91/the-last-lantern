@@ -1,7 +1,7 @@
 /* Night Arcade — service worker.
    Caches the shell + catalog + listed game shells so the library works offline.
    Bump VERSION when shipping shell or catalog changes. */
-const VERSION = 'night-arcade-v5';
+const VERSION = 'night-arcade-v6';
 const SHELL = [
   './',
   './index.html',

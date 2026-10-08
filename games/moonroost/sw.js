@@ -1,5 +1,5 @@
 /* Moonroost — offline cache. Bump VERSION on ship. */
-const VERSION = 'moonroost-v1';
+const VERSION = 'moonroost-v2';
 const SHELL = [
   './',
   './index.html',
