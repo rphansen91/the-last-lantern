@@ -9,7 +9,7 @@
       "id": "the-last-lantern",
       "title": "The Last Lantern",
       "blurb": "Oil runs low in the catacombs. The watchers wait past the edge of the light.",
-      "description": "A mobile-first atmospheric exploration game. Descend three procedurally generated depths with a lantern that keeps burning low. Collect lore, solve light puzzles, and keep the flame from going out \u2014 because when it dies, the watchers close in.",
+      "description": "A mobile-first atmospheric exploration game. Descend three procedurally generated depths with a lantern that keeps burning low. Collect lore, solve light puzzles, and keep the flame from going out — because when it dies, the watchers close in.",
       "how": "Walk with a floating stick (lower half of the screen). Aim your gaze with a drag in the upper half. Hold Raise to widen the light (burns oil faster) or Lower to shrink it to an ember. Use interacts with braziers, mirrors, and seals. Find the stair at each depth after solving its light puzzle.",
       "tags": [
         "atmospheric",
@@ -42,7 +42,7 @@
       "id": "moonroost",
       "title": "Moonroost",
       "blurb": "One owl to every moonlit grove. They won't share a row or a column, and they won't touch, not even at a corner.",
-      "description": "A mobile-first logic puzzle set in a hushed night wood. Each board is split into colored groves, and every grove needs exactly one owl. No two owls may share a row or a column, and none may perch beside another, even diagonally. Every board has a single solution you can reach by pure deduction, so cross out the branches that can't hold an owl, squeeze the wood down, and land each owl only where it must go. There are 36 handcrafted campaign groves that ramp from 5\u00d75 warm-ups to 10\u00d710 knots, plus an endless Deep wood and a fresh roost every night with a streak.",
+      "description": "A mobile-first logic puzzle set in a hushed night wood. Each board is split into colored groves, and every grove needs exactly one owl. No two owls may share a row or a column, and none may perch beside another, even diagonally. Every board has a single solution you can reach by pure deduction, so cross out the branches that can't hold an owl, squeeze the wood down, and land each owl only where it must go. There are 36 handcrafted campaign groves that ramp from 5×5 warm-ups to 10×10 knots, plus an endless Deep wood and a fresh roost every night with a streak.",
       "how": "Tap a cell to cross it out, and tap again to clear it. Drag across cells to cross out a whole run; the stroke snaps to its row or column. Double-tap to land an owl. Correct owls lock in, but a wrong perch costs one of your three moons. Placed owls automatically dim every cell they rule out (you can turn this off in pause). Listen explains the next logical step when you're stuck, spending one song: you start with 3 and earn another each time you settle a new grove flawlessly. Undo steps back your crosses, and Clear wipes them. Finish with every moon and no hints for a flawless Silent wings mark.",
       "tags": [
         "puzzle",
@@ -54,6 +54,22 @@
       "path": "games/moonroost/",
       "cover": "games/moonroost/screenshots/cover.png",
       "accent": "#c4adff"
+    },
+    {
+      "id": "gloamglass",
+      "title": "Gloamglass",
+      "blurb": "Pour luminous night-inks until every phial holds a single hue under the gloaming.",
+      "description": "A mobile-first water-sort puzzle set in a quiet alchemist's loft at dusk. Glass phials hold stacked layers of glowing night-ink. Lift one, pour into another when the top colors match or the glass is empty, and keep going until every phial is either vacant or filled with a single hue. Twenty-four campaign lofts ramp from a two-ink warm-up to crowded ten-color shelves, with hard and super-hard marks mid-campaign. Undo steps back a pour, Shuffle rearranges the phials on the shelf, and Extra phial adds one empty glass once per loft — all free, with no ads or lives gate. Harder lofts add a pour budget; when it runs out you can retry the same layout or spend Extra if you still have it.",
+      "how": "Tap a phial to lift it, tap another to pour. Pour only onto an empty phial or a matching top color with room. Fill every phial with one color to clear the loft. Undo steps back a pour. Shuffle rearranges the phials. Extra phial adds one empty glass once per loft.",
+      "tags": [
+        "puzzle",
+        "casual",
+        "sorting"
+      ],
+      "status": "playable",
+      "path": "games/gloamglass/",
+      "cover": "games/gloamglass/screenshots/cover.png",
+      "accent": "#7ad4c4"
     }
   ]
 }

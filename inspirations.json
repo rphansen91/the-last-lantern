@@ -4,7 +4,7 @@
       "date": "2026-10-06",
       "sourceTitle": "Block Out! - Color Sort Puzzle",
       "sourceChart": "US App Store Top Free Games #2 (observed Oct 2026)",
-      "sourceDeveloper": "Grand Games A.\u015e.",
+      "sourceDeveloper": "Grand Games A.Ş.",
       "why": "Its spatial drag-the-block-to-the-matching-door loop, played against a timer, is hugely addictive. Night Arcade only had atmospheric horror exploration, so a polished casual puzzle rounds out the catalog.",
       "newSlug": "bayshift",
       "newTitle": "Bayshift",
@@ -33,7 +33,7 @@
       "why": "It's the #1 free game in the US right now (about 295k ratings at 4.8). It's a pure deduction grid puzzle in the region-queens family, which adds real variety next to Night Arcade's horror exploration and block-escape titles. Its loop of tap to cross out, double-tap to commit, and a 3-heart mistake budget translates faithfully into a zero-dependency canvas game.",
       "newSlug": "moonroost",
       "newTitle": "Moonroost",
-      "notes": "Core loop kept close to the source. It uses an n\u00d7n board with n colored regions, one piece per row, column, and region, and no two pieces touching (8-neighborhood). Every board has a unique solution solvable by logic. Single tap toggles a cross, drag paints or erases crosses, and double-tap commits a piece. A correct piece locks and can't be removed, and a wrong commit costs one of 3 lives. At 0 lives you can retry, or take one revive (the source uses a rewarded ad; ours is free). The game has a count-up timer with best time, Undo / Hint / Reset buttons, and a hint that first flags mistakes and then explains a forced move. The campaign mixes sizes from 5\u00d75 to 10\u00d710 non-monotonically, and there's a daily puzzle with a streak. Original elements are the name, fiction (owls roosting in moonlit groves of the Hush Wood), lives as moons, the procedural canvas owl art, WebAudio hoots and ticks, and the copy. Additions for feel include magnetic row/column rails on drag-paint, a press squash and spring, X stamp overshoot, owl drop-and-squash, an auto-cross ripple outward from each owl, eyes that track the finger, and haptic ticks. No source names, cats, art, audio, logos, or trademarked terms are used in the game or catalog.",
+      "notes": "Core loop kept close to the source. It uses an n×n board with n colored regions, one piece per row, column, and region, and no two pieces touching (8-neighborhood). Every board has a unique solution solvable by logic. Single tap toggles a cross, drag paints or erases crosses, and double-tap commits a piece. A correct piece locks and can't be removed, and a wrong commit costs one of 3 lives. At 0 lives you can retry, or take one revive (the source uses a rewarded ad; ours is free). The game has a count-up timer with best time, Undo / Hint / Reset buttons, and a hint that first flags mistakes and then explains a forced move. The campaign mixes sizes from 5×5 to 10×10 non-monotonically, and there's a daily puzzle with a streak. Original elements are the name, fiction (owls roosting in moonlit groves of the Hush Wood), lives as moons, the procedural canvas owl art, WebAudio hoots and ticks, and the copy. Additions for feel include magnetic row/column rails on drag-paint, a press squash and spring, X stamp overshoot, owl drop-and-squash, an auto-cross ripple outward from each owl, eyes that track the finger, and haptic ticks. No source names, cats, art, audio, logos, or trademarked terms are used in the game or catalog.",
       "researchSources": [
         "https://apps.apple.com/us/app/meowdoku/id6761760135",
         "https://itunes.apple.com/us/rss/customerreviews/id=6761760135/sortBy=mostRecent/json",
@@ -44,6 +44,21 @@
         "https://meowdoku.run/levels",
         "https://meowdoku.run/how-to-play",
         "https://www.appireview.com/com.oakever.meowdoku"
+      ]
+    },
+    {
+      "date": "2026-10-09",
+      "sourceTitle": "Magic Sort!",
+      "sourceChart": "US App Store Top Free Games #3 (observed 2026-10-09)",
+      "sourceDeveloper": "Grand Games A.Ş.",
+      "why": "Water-sort / color-pour is uncovered in Night Arcade (we already have atmospheric exploration, block-escape, and region-queens logic). Magic Sort! sits at #3 US Top Free with a polished bottle-pour loop that translates cleanly to a zero-dependency canvas game.",
+      "newSlug": "gloamglass",
+      "newTitle": "Gloamglass",
+      "notes": "Core loop kept close to the source: capacity-4 bottles, tap to select / tap to pour, pour only onto empty or matching top color with room, transfer the largest contiguous top run that fits, win when every bottle is empty or mono-full. Undo is unlimited. Shuffle rearranges bottle positions (source: rearrange bottles). Extra phial is one free empty bottle per level (maps to the source's buy-extra-bottle continue beat, without ads/IAP). Harder levels have a move budget; at zero the player can Retry or use Extra if unused — soft fail, never paywalled. Queued taps while a pour animates. Count-up timer, best time, and 3/2/1 stars from efficiency. Original fiction (alchemist's loft / night-inks), teal accent #7ad4c4, procedural glass phials, WebAudio glugs and chimes, vibrate haptics. No Magic Sort names, cats, logos, art, audio, or trademarked terms in the game UI, title, or catalog blurb.",
+      "researchSources": [
+        "https://apps.apple.com/us/app/magic-sort/id6499209744",
+        "https://apps.apple.com/us/app/magic-sort/id6499209744?see-all=reviews",
+        "US App Store Top Free Games chart observation 2026-10-09"
       ]
     }
   ]
