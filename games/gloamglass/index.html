@@ -517,7 +517,9 @@ function computeLayout() {
       x: x0 + rowOffset + c * (phialW + gapX),
       y: y0 + r * (phialH + gapY),
       w: phialW,
-      h: phialH
+      h: phialH,
+      gx: gapX, gy: gapY,
+      firstRow: r === 0, lastRow: r === rows - 1
     });
   }
 }
@@ -563,13 +565,21 @@ function ensureTimer() {
   if (!timerOn) { timerOn = true; startedAt = Date.now() - elapsed; }
 }
 
+// Generous hit boxes: each phial owns its whole slot (half the gap on each side,
+// plus extra headroom above for the lifted glass and below the base). Nearest wins.
 function hitTest(x, y) {
-  var i, p, pad = 6;
+  var i, p, best = -1, bestD = 1e9;
   for (i = 0; i < layout.length; i++) {
     p = layout[i];
-    if (x >= p.x - pad && x <= p.x + p.w + pad && y >= p.y - pad - 20 && y <= p.y + p.h + pad) return i;
+    var top = p.y - (p.gy || 16) / 2 - 30, bot = p.y + p.h + (p.gy || 16) / 2 + 10;
+    if (p.firstRow) top = p.y - 70;
+    if (p.lastRow) bot = p.y + p.h + 40;
+    if (y < top || y > bot) continue;
+    var dx = Math.abs(x - (p.x + p.w / 2));
+    if (dx > p.w / 2 + (p.gx || 10) / 2 + 18) continue;
+    if (dx < bestD) { bestD = dx; best = i; }
   }
-  return -1;
+  return best;
 }
 
 function doSelect(i) {
@@ -953,20 +963,34 @@ function onPointer(x, y) {
 }
 
 function bind() {
-  function pt(e) {
-    if (e.touches && e.touches[0]) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    return { x: e.clientX, y: e.clientY };
+  // ONE input path per tap. iOS Safari fires BOTH pointerdown and touchstart for
+  // the same finger; handling both selected then instantly deselected the phial.
+  function toCanvas(cx, cy) {
+    var r = canvas.getBoundingClientRect();
+    return { x: (cx - r.left) * (W / (r.width || W)), y: (cy - r.top) * (H / (r.height || H)) };
   }
-  canvas.addEventListener('pointerdown', function (e) {
-    if (mode !== 'play') return;
-    e.preventDefault();
-    var p = pt(e); onPointer(p.x, p.y);
-  }, { passive: false });
-  canvas.addEventListener('touchstart', function (e) {
-    if (mode !== 'play') return;
-    e.preventDefault();
-    var p = pt(e); onPointer(p.x, p.y);
-  }, { passive: false });
+  function tap(cx, cy) { var p = toCanvas(cx, cy); onPointer(p.x, p.y); }
+  if (window.PointerEvent) {
+    canvas.addEventListener('pointerdown', function (e) {
+      if (mode !== 'play') return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      if (!e.isPrimary) return;
+      e.preventDefault();
+      tap(e.clientX, e.clientY);
+    }, { passive: false });
+    // touch: only block scroll/zoom/double-tap defaults; never handle the tap here
+    canvas.addEventListener('touchstart', function (e) { if (mode === 'play') e.preventDefault(); }, { passive: false });
+  } else {
+    canvas.addEventListener('touchstart', function (e) {
+      if (mode !== 'play') return;
+      e.preventDefault(); // also suppresses the emulated mouse events
+      var t = e.changedTouches && e.changedTouches[0]; if (t) tap(t.clientX, t.clientY);
+    }, { passive: false });
+    canvas.addEventListener('mousedown', function (e) {
+      if (mode !== 'play' || e.button !== 0) return;
+      tap(e.clientX, e.clientY);
+    });
+  }
 
   function on(id, fn) { var el = $(id); if (el) el.addEventListener('click', fn); }
   on('bPlay', function () { SFX.tap(); startLevel(Math.min(save.unlocked, LEVELS.length) - 1); });
