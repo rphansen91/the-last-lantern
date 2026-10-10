@@ -135,7 +135,7 @@
       catalog = data;
       renderMast(data.arcade || { name: 'Night Arcade', tagline: 'Small games for dark hours.' });
       renderGrid(data.games || []);
-      document.title = (data.arcade && data.arcade.name ? data.arcade.name : 'Night Arcade') + ' — Library';
+      document.title = (data.arcade && data.arcade.name ? data.arcade.name : 'Night Arcade');
     })
     .catch(err => {
       grid.innerHTML = '';
@@ -154,7 +154,7 @@
     if ('serviceWorker' in navigator && window.isSecureContext) {
       addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js').then(
-          r => { window.__sw = 'registered:' + r.scope; },
+          r => { window.__sw = 'registered:' + (r && r.scope); },
           e => { window.__sw = 'failed:' + e.message; }
         );
       });

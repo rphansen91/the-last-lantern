@@ -70,6 +70,22 @@
       "path": "games/gloamglass/",
       "cover": "games/gloamglass/screenshots/cover.png",
       "accent": "#7ad4c4"
+    },
+    {
+      "id": "knotlight",
+      "title": "Knotlight",
+      "blurb": "Twist glowing hoops until their gaps slip every clip, and send each freed ring up into the night as a star.",
+      "description": "A mobile-first ring-untangling puzzle under a midnight sky. Neon-glass hoops hang hitched together by small clips. Drag a ring round to turn it, and when its opening reaches a clip the clip slips off. A piece that still owns a clip is pinned, so find the loose end and work inward. Every freed hoop flies up and becomes a star, and a cleared board draws its constellation. Twenty-four boards ramp from a single hitch to twelve-ring knots with brass studs that can't pass a clip, iron pegs, closed rings, sliding bars, and embers that burn down one per move.",
+      "how": "Drag a ring round to turn it; its opening moves with it. A clip is the colour of the piece it belongs to and hooks the other piece. Turn the hooked ring until its gap reaches the clip and the clip slips off. A piece that still owns a clip is pinned and won't budge. A piece with no clips left flies away. Brass studs can't pass a clip or an iron peg, so turn the other way. Closed rings have no gap, so unhook everything around them. Bars slide off along their arrows once they're free. Embers burn down one per move, so free that ring before it hits zero. Hint shows a good move, Snip cuts any one clip once per board, and Undo is unlimited.",
+      "tags": [
+        "puzzle",
+        "casual",
+        "spatial"
+      ],
+      "status": "playable",
+      "path": "games/knotlight/",
+      "cover": "games/knotlight/screenshots/cover.png",
+      "accent": "#ff8fb1"
     }
   ]
 }

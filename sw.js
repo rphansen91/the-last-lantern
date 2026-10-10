@@ -1,7 +1,7 @@
 /* Night Arcade — service worker.
    Caches the shell + catalog + listed game shells so the library works offline.
    Bump VERSION when shipping shell or catalog changes. */
-const VERSION = 'night-arcade-v10';
+const VERSION = 'night-arcade-v11';
 const SHELL = [
   './',
   './index.html',
@@ -49,7 +49,20 @@ const SHELL = [
   './games/gloamglass/icons/icon-maskable-512.png',
   './games/gloamglass/icons/apple-touch-icon.png',
   './games/gloamglass/icons/favicon-32.png',
-  './games/gloamglass/screenshots/cover.png'
+  './games/gloamglass/screenshots/cover.png',
+  './games/knotlight/',
+  './games/knotlight/index.html',
+  './games/knotlight/game.js',
+  './games/knotlight/logic.js',
+  './games/knotlight/levels.js',
+  './games/knotlight/manifest.webmanifest',
+  './games/knotlight/icons/icon-192.png',
+  './games/knotlight/icons/icon-512.png',
+  './games/knotlight/icons/icon-maskable-512.png',
+  './games/knotlight/icons/apple-touch-icon.png',
+  './games/knotlight/icons/favicon-32.png',
+  './games/knotlight/screenshots/cover.png',
+  './icons/og-image.png'
 ];
 
 self.addEventListener('install', e => {

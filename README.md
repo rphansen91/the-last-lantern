@@ -14,11 +14,13 @@ games/
   the-last-lantern/   atmospheric horror exploration
   bayshift/           timed crate-escape puzzle (midnight dock)
   moonroost/          one-owl-per-grove logic puzzle (night wood)
+  gloamglass/         night-ink water-sort puzzle
+  knotlight/          ring-untangling rotate-the-gap puzzle
 screenshots/          arcade UI captures (phone viewport)
 tools/arcade-icons.html  re-render arcade icons in headless Chrome
 ```
 
-Live: [https://rphansen91.github.io/the-last-lantern/](https://rphansen91.github.io/the-last-lantern/)
+Live: [https://rphansen91.github.io/night-arcade/](https://rphansen91.github.io/night-arcade/)
 
 Serve locally (`python3 -m http.server` in this folder) and open http://localhost:8000. The library loads `catalog.json`, shows game cards, and **Play** navigates to `games/<slug>/?from=arcade` (full page, not an iframe). Games that understand `?from=arcade` show a small **← Library** chip; otherwise use the browser back gesture.
 
@@ -58,8 +60,13 @@ Dark background, film grain, cyan accent — kinship with The Last Lantern witho
 
 ## The Last Lantern
 
-Nested at [`games/the-last-lantern/`](games/the-last-lantern/). Direct play URL: [`games/the-last-lantern/`](https://rphansen91.github.io/the-last-lantern/games/the-last-lantern/). See that folder’s README for mechanics, controls, and hosting notes for the game itself.
+Nested at [`games/the-last-lantern/`](games/the-last-lantern/). Direct play URL: [`games/the-last-lantern/`](https://rphansen91.github.io/night-arcade/games/the-last-lantern/). See that folder’s README for mechanics, controls, and hosting notes for the game itself.
 
 ## Bayshift
 
-Nested at [`games/bayshift/`](games/bayshift/). Direct play: [`games/bayshift/`](https://rphansen91.github.io/the-last-lantern/games/bayshift/). A timed crate-escape puzzle: drag multi-cell freight crates out through bay doors of their color, but only if they fit through the door, before the ferry whistle blows. 18 bays with frost, rails, shrink-wrap and roller shutters. Every bay is solver-checked (`node games/bayshift/tools/solve.js games/bayshift/index.html`).
+Nested at [`games/bayshift/`](games/bayshift/). Direct play: [`games/bayshift/`](https://rphansen91.github.io/night-arcade/games/bayshift/). A timed crate-escape puzzle: drag multi-cell freight crates out through bay doors of their color, but only if they fit through the door, before the ferry whistle blows. 18 bays with frost, rails, shrink-wrap and roller shutters. Every bay is solver-checked (`node games/bayshift/tools/solve.js games/bayshift/index.html`).
+
+## Knotlight
+
+Nested at [`games/knotlight/`](games/knotlight/). Direct play: [`games/knotlight/`](https://rphansen91.github.io/night-arcade/games/knotlight/). A ring-untangling puzzle: drag glowing hoops round until their gaps slip the clips that hold them, and every freed ring flies up into the sky as a star. 24 boards with brass studs, iron pegs, closed rings, sliding bars and embers. Rules live in `logic.js` (shared by the game and the tools); every board is proven clearable by `node games/knotlight/tools/solve.js`.
+

@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#070a14">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Twist glowing rings until their gaps slip every clip, and send each freed hoop up into the night as a star.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Knotlight">
+<meta name="format-detection" content="telephone=no">
+<meta property="og:title" content="Knotlight · Night Arcade">
+<meta property="og:description" content="Twist glowing rings until their gaps slip every clip, and send each freed hoop up into the night as a star.">
+<meta property="og:image" content="https://rphansen91.github.io/night-arcade/games/knotlight/screenshots/cover.png">
+<title>Knotlight</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+:root{--bg:#070a14;--ink:#e8ecf6;--dim:#8590a8;--line:rgba(255,143,177,.16);--accent:#ff8fb1;--gold:#ffd27a}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;height:100dvh;background:var(--bg);overflow:hidden;color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-user-select:none;user-select:none;touch-action:none;
+  -webkit-touch-callout:none;-webkit-text-size-adjust:100%;overscroll-behavior:none}
+body{position:fixed;inset:0}
+canvas#c{display:block;position:fixed;inset:0;z-index:1;touch-action:none;width:100%;height:100%}
+.ov{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow-y:auto;
+  padding:calc(24px + env(safe-area-inset-top,0px)) calc(22px + env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) calc(22px + env(safe-area-inset-left,0px));
+  background:rgba(5,7,14,.9);transition:opacity .35s ease;touch-action:pan-y}
+#title{justify-content:flex-start}
+#title .eyebrow{margin-top:max(33vh,240px)}
+#title{background:radial-gradient(90% 55% at 50% 10%,rgba(255,143,177,.13),transparent 60%),linear-gradient(180deg,rgba(5,7,14,.55),rgba(5,7,14,.25) 60%,rgba(5,7,14,.7))}
+.ov.soft{background:rgba(5,7,14,.66);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+.ov.hidden{opacity:0;pointer-events:none}
+.eyebrow{font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:var(--accent);margin:0 0 1em}
+h1{font-weight:800;letter-spacing:.16em;font-size:clamp(32px,10vw,50px);margin:0 0 .3em;color:#fff4f8;text-shadow:0 0 28px rgba(255,143,177,.45)}
+h2{font-weight:750;letter-spacing:.08em;font-size:clamp(22px,6.5vw,32px);margin:0 0 .35em;color:#fff4f8}
+.lede{max-width:23em;color:var(--dim);line-height:1.6;font-size:15px;margin:0 0 1.5em}
+.btn{font:inherit;font-weight:750;background:linear-gradient(180deg,#ffb3cb,#e86b95);color:#2a0c18;border:none;padding:15px 38px;letter-spacing:.12em;
+  min-height:52px;font-size:14px;text-transform:uppercase;cursor:pointer;border-radius:16px;touch-action:manipulation;
+  box-shadow:0 6px 0 #9c3d60,0 12px 30px rgba(255,143,177,.25);transition:transform .08s,box-shadow .08s}
+.btn:active{transform:translateY(4px);box-shadow:0 2px 0 #9c3d60,0 6px 16px rgba(255,143,177,.2)}
+.ghost{font:inherit;background:rgba(16,20,34,.85);color:#cdd3e4;border:1px solid #2c3350;padding:11px 18px;letter-spacing:.1em;font-size:12px;
+  text-transform:uppercase;border-radius:12px;min-height:44px;cursor:pointer;touch-action:manipulation;font-weight:650}
+.ghost:active{transform:scale(.97)}
+.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:1.1em}
+.howlist{max-width:22em;text-align:left;color:#bcc4d8;font-size:14px;line-height:1.55;margin:0 0 1.4em;padding:0;list-style:none}
+.howlist li{margin:0 0 .75em}
+.howlist b{color:#fff0f5}
+.lvl-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:min(360px,92vw);margin:0 auto 1.2em}
+.lvl-grid button{aspect-ratio:1;border-radius:14px;border:1px solid #2c3350;background:#11152a;color:#cdd3e4;font:800 15px/1 system-ui;cursor:pointer;
+  touch-action:manipulation;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:4px}
+.lvl-grid button small{font-size:9px;color:var(--gold);font-weight:700;min-height:9px;letter-spacing:1px}
+.lvl-grid button.done{border-color:rgba(255,143,177,.42)}
+.lvl-grid button.cur{border-color:var(--accent);box-shadow:0 0 18px rgba(255,143,177,.3)}
+.lvl-grid button:disabled{opacity:.28}
+#hud{position:fixed;left:0;right:0;top:0;z-index:5;display:none;pointer-events:none;align-items:center;justify-content:space-between;gap:6px;
+  padding:calc(10px + env(safe-area-inset-top,0px)) calc(10px + env(safe-area-inset-right,0px)) 0 calc(10px + env(safe-area-inset-left,0px))}
+body[data-mode=play] #hud,body[data-mode=play] #dock{display:flex}
+.pill{pointer-events:auto;background:rgba(9,12,24,.8);border:1px solid var(--line);border-radius:999px;padding:0 12px;height:36px;
+  display:inline-flex;align-items:center;gap:6px;font:700 12px/1 system-ui;color:#dfe4f2;letter-spacing:.03em;white-space:nowrap}
+.pill .dim{color:var(--dim);font-weight:600}
+#hudL{display:flex;gap:6px;min-width:0;overflow:hidden}
+#lvPill{min-width:0}
+#lvName{overflow:hidden;text-overflow:ellipsis;max-width:38vw}
+#bPause{width:36px;padding:0;justify-content:center;font-size:16px;cursor:pointer;color:#dfe4f2}
+#dock{position:fixed;left:0;right:0;bottom:0;z-index:5;display:none;justify-content:center;gap:8px;pointer-events:none;
+  padding:0 calc(10px + env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) calc(10px + env(safe-area-inset-left,0px))}
+#dock button{pointer-events:auto;min-width:74px;min-height:52px;border-radius:14px;border:1px solid #2c3350;background:rgba(12,15,30,.88);
+  color:#cdd3e4;font:750 11px/1.1 system-ui;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;touch-action:manipulation;padding:8px 10px}
+#dock button:active{transform:scale(.96)}
+#dock button:disabled{opacity:.32}
+#dock button.on{border-color:var(--accent);color:#fff;box-shadow:0 0 16px rgba(255,143,177,.35)}
+#dock button .sub{display:block;font-size:9px;color:var(--dim);margin-top:4px;font-weight:650;letter-spacing:.02em;text-transform:none}
+#toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(6px);z-index:30;
+  background:rgba(12,15,30,.92);border:1px solid var(--line);color:#e6eaf4;padding:10px 16px;border-radius:12px;font:600 13px/1.35 system-ui;
+  width:max-content;max-width:min(320px,88vw);text-align:center;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:16px;width:min(280px,86vw);margin:0 auto .7em;color:#cdd3e4;font-size:14px}
+.toggle button{min-width:64px;min-height:40px}
+.stars-big{font-size:30px;color:var(--gold);letter-spacing:6px;margin:.1em 0 .5em;text-shadow:0 0 18px rgba(255,210,122,.45)}
+.stat{color:var(--dim);font-size:14px;margin:0 0 .4em}
+#arcadeBack{position:fixed;left:calc(10px + env(safe-area-inset-left,0px));top:calc(10px + env(safe-area-inset-top,0px));z-index:100;height:36px;min-width:36px;
+  display:inline-flex;align-items:center;justify-content:center;padding:0 12px;border-radius:999px;background:rgba(8,10,20,.82);color:#ffd0df;
+  border:1px solid rgba(255,143,177,.42);font:600 12px/1 system-ui,-apple-system,sans-serif;letter-spacing:.04em;text-decoration:none;
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+body[data-mode=play] #arcadeBack{padding:0;width:36px;font-size:16px}
+body[data-mode=play] #arcadeBack .lbl{display:none}
+html.arcade #hud{padding-left:calc(54px + env(safe-area-inset-left,0px))}
+html.cover #hud,html.cover #dock,html.cover #toast,html.cover #arcadeBack{display:none!important}
+</style>
+</head>
+<body data-mode="title">
+<canvas id="c"></canvas>
+
+<div id="hud">
+  <div id="hudL"><span class="pill" id="lvPill"><span class="dim" id="lvNum">1</span><span id="lvName">First Light</span></span></div>
+  <div style="display:flex;gap:6px;flex:none"><span class="pill" id="movePill"><span id="mvCount">0</span><span class="dim">/ par <span id="mvPar">1</span></span></span>
+  <button class="pill" id="bPause" aria-label="Menu">⋯</button></div>
+</div>
+<div id="dock">
+  <button id="bUndo">Undo<span class="sub">step back</span></button>
+  <button id="bHint">Hint<span class="sub">show a move</span></button>
+  <button id="bSnip">Snip<span class="sub" id="snipSub">1 per board</span></button>
+  <button id="bRestart">Reset<span class="sub">start over</span></button>
+</div>
+<div id="toast"></div>
+
+<section class="ov" id="title">
+  <p class="eyebrow">Night Arcade</p>
+  <h1>KNOTLIGHT</h1>
+  <p class="lede">Glowing hoops hang hitched together in the dark. Twist each one until its gap slips the clip that holds it, and every freed ring rises into the sky as a star.</p>
+  <button class="btn" id="bPlay">Play</button>
+  <div class="row"><button class="ghost" id="bLevels">Boards</button><button class="ghost" id="bHow">How to play</button></div>
+</section>
+
+<section class="ov hidden" id="how">
+  <h2>How to play</h2>
+  <ul class="howlist">
+    <li><b>Drag a ring round</b> to turn it. Its opening travels with it.</li>
+    <li><b>Clips</b> are the little sleeves where two pieces meet. A clip is the colour of the piece it belongs to, and it hooks the other piece. Turn the hooked ring until its <b>gap reaches the clip</b> and the clip slips off.</li>
+    <li>A piece that still <b>owns a clip is pinned</b> and won't budge. Free the ring it hooks first.</li>
+    <li>A piece with no clips left <b>flies up</b> and becomes a star. Clear the board.</li>
+    <li><b>Brass studs</b> can't pass a clip or an iron peg, so turn the other way. <b>Closed rings</b> have no gap, so unhook everything around them. <b>Bars</b> slide off along their arrows once they're free.</li>
+    <li><b>Embers</b> burn down one per move. Free that ring before it hits zero.</li>
+    <li><b>Hint</b> shows a good move. <b>Snip</b> cuts any one clip, once per board. Undo is unlimited.</li>
+  </ul>
+  <button class="btn" id="bHowOk">Got it</button>
+</section>
+
+<section class="ov hidden" id="levels">
+  <h2>Boards</h2>
+  <p class="lede" style="margin-bottom:1em">Every board can be cleared without Snip or Hint.</p>
+  <div class="lvl-grid" id="lvlGrid"></div>
+  <button class="ghost" id="bLevelsBack">Back</button>
+</section>
+
+<section class="ov soft hidden" id="win">
+  <p class="eyebrow" id="winEyebrow">Board clear</p>
+  <h2 id="winTitle">Unknotted</h2>
+  <div class="stars-big" id="winStars">★★★</div>
+  <p class="stat" id="winStat"></p>
+  <div class="row"><button class="btn" id="bNext">Next board</button></div>
+  <div class="row"><button class="ghost" id="bWinRetry">Replay</button><button class="ghost" id="bWinLevels">Boards</button></div>
+</section>
+
+<section class="ov soft hidden" id="fail">
+  <p class="eyebrow" id="failEyebrow">The ember burned out</p>
+  <h2 id="failTitle">Too slow for the spark</h2>
+  <p class="lede" id="failText">Free the ember's ring before its count reaches zero.</p>
+  <div class="row"><button class="btn" id="bFailUndo">Undo move</button></div>
+  <div class="row"><button class="ghost" id="bFailRetry">Restart</button><button class="ghost" id="bFailLevels">Boards</button></div>
+</section>
+
+<section class="ov soft hidden" id="pause">
+  <h2>Paused</h2>
+  <div class="toggle"><span>Sound</span><button class="ghost" id="tSound">On</button></div>
+  <div class="toggle"><span>Haptics</span><button class="ghost" id="tHaptic">On</button></div>
+  <div class="row"><button class="btn" id="bResume">Resume</button></div>
+  <div class="row"><button class="ghost" id="bPauseHow">How to play</button><button class="ghost" id="bPauseLevels">Boards</button></div>
+</section>
+
+<script src="logic.js"></script>
+<script src="levels.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
